@@ -1,14 +1,11 @@
 module Main where
 
-import Tokenizer
-
-runTokenizer :: String -> IO ()
-runTokenizer input = do
-  putStrLn input
-  putStrLn $ show $ tokenize input
-  putStrLn ""
+import System.Environment
+import Automaton
 
 main :: IO ()
 main = do
-  runTokenizer " 1 2 abc if "
-  runTokenizer " "
+  [fileName] <- getArgs
+  input <- readFile fileName
+  let a = parseAutomaton input
+  putStrLn $ maybe "Not an automaton!" (const "Hurray! Correct automaton!") a
