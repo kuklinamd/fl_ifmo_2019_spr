@@ -6,7 +6,7 @@ import Data.Char (digitToInt)
 
 data Token = Ident String
            | KeyWord String
-           | Number Int  -- Change Number type if you work with something other than Int
+           | Number Integer  -- Change Number type if you work with something other than Int
            deriving (Show, Eq)
 
 digits = ['0' .. '9']
@@ -43,14 +43,14 @@ parseKeyWord :: Parser String String
 parseKeyWord = keywords kwds
 
 -- number = (0x | 0X) digit+
-parseNumber :: Parser String Int
+parseNumber :: Parser String Integer
 parseNumber = readHex <$> ((string "0x" <|> string "0X") *> some hexDigit)
   where
-    readHex :: String -> Int
+    readHex :: String -> Integer
     readHex = readHex' . reverse
       where
         readHex' [] = 0
-        readHex' (s:ss) = readHex' ss * 16 + digitToInt s
+        readHex' (s:ss) = readHex' ss * 16 + toInteger (digitToInt s)
 
     hexDigit :: Parser String Char
     hexDigit = orChar hexDigits
