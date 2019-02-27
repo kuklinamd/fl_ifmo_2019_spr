@@ -4,6 +4,7 @@ import Prelude hiding (fail, seq)
 import qualified Trie
 import Control.Arrow (second)
 import Control.Applicative (Alternative, empty, (<|>))
+import Data.Char
 
 -- Parsing result is some payload and a suffix of the input which is yet to be parsed
 newtype Parser str ok = Parser { runParser :: str -> Maybe (str, ok) }
@@ -117,3 +118,11 @@ number :: Parser String Integer
 number = read <$> some digit
   where
     digit = orChar ['0' .. '9']
+
+
+spaces = many $ orChar spaceChars
+spaceChars = ['\t', '\n', '\r', '\f', '\v', ' ']
+
+betweenSpaces = between spaces
+
+between b p = b *> p <* b
