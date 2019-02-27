@@ -1,4 +1,4 @@
-module Automaton where
+module Automaton (Automaton(..), parseAutomaton) where
 
 import Combinators;
 import ListParserCombinator;
@@ -7,6 +7,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
 import Control.Monad (join)
+import Data.Maybe (isJust)
 
 type Set = Set.Set
 type Map = Map.Map
@@ -17,7 +18,7 @@ data Automaton s q = Automaton { sigma     :: Set s
                                , termState :: Set q
                                , delta     :: Map (q, s) (Maybe q)
                                }
-  deriving Show
+  deriving (Show, Eq)
 
 -- Top level function: parses input string, checks that it is an automaton, and then returns it.
 -- Should return Nothing, if there is a syntax error or the automaton is not a correct automaton.
@@ -27,8 +28,8 @@ data Automaton s q = Automaton { sigma     :: Set s
 -- * Any of the terminal states is not a state
 -- * Delta function is defined on not-a-state or not-a-symbol-from-sigma
 -- Pick appropriate types for s and q
-parseAutomaton :: String -> Maybe (Automaton Char Integer)
-parseAutomaton s = join $ checkAutomation <$> fst' (runParser parseLists s)
+--parseAutomaton :: String -> Maybe (Automaton Char Integer)
+parseAutomaton s = runParser parseLists s  --join $ checkAutomation <$> fst' (runParser parseLists s)
   where
     fst' :: Maybe ([a1], a2) -> Maybe a2
     fst' (Just ([], auto)) = Just auto
@@ -59,15 +60,15 @@ parseAutomaton s = join $ checkAutomation <$> fst' (runParser parseLists s)
     toDelta [] = Map.empty
     toDelta ((src,symb,dist):ss) = Map.insert (src,symb) (Just dist) $ toDelta ss
 
-    parseLists = do
+    parseLists = betweenSpaces $ do
       symbList <- parseSymbolList
-      char ','
+      betweenSpaces $ char ','
       stateList <- parseStateList
-      char ','
+      betweenSpaces $ char ','
       startList <- parseStartList
-      char ','
+      betweenSpaces $ char ','
       termList  <- parseTerminalList
-      char ','
+      betweenSpaces $ char ','
       deltList  <- parseDeltaList
       return (toSigma symbList,
               toStates stateList,
@@ -75,7 +76,7 @@ parseAutomaton s = join $ checkAutomation <$> fst' (runParser parseLists s)
               toTermState termList,
               toDelta deltList)
 
-    parseSymbolList = parseList symbol delim lbr rbr 0
+    parseSymbolList = parseList (betweenSpaces symbol) delim lbr rbr 0
 
     parseNumList n = parseList number delim lbr rbr n
 
@@ -86,17 +87,20 @@ parseAutomaton s = join $ checkAutomation <$> fst' (runParser parseLists s)
     parseDeltaList = parseList parseTriple delim lbr rbr 0
 
     parseTriple = char '(' *> do {
-      s1 <- number;
-      char ',';
-      symb <- symbol;
-      char ',';
-      s2 <- number;
+      s1 <- betweenSpaces number;
+      betweenSpaces $ char ',';
+      symb <- betweenSpaces symbol;
+      betweenSpaces $ char ',';
+      s2 <- betweenSpaces number;
       pure (s1, symb, s2)} <* char ')'
 
 
-    symbol = orChar ['a' .. 'z']
-    delim = char ','
-    lbr = char '<'
-    rbr = char '>'
+    symbol = betweenSpaces $ orChar ['a' .. 'z']
+    delim  = betweenSpaces $ char ','
+    lbr    = betweenSpaces $ char '<'
+    rbr    = betweenSpaces $ char '>'
 
 testAutomata = "<a,b,c,d>,<1,2,3,4>,<1>,<3,4>,<(1,a,3),(2,b,4)>"
+testAutomataSpaces = " < a , b , c , d > , < 1 , 2 , 3 , 4 > , < 1 > , < 3 , 4 > , < ( 1 , a , 3 ) , ( 2 , b , 4 ) >"
+
+test1 = let res = parseAutomaton testAutomata in isJust res && res == parseAutomaton testAutomataSpaces
