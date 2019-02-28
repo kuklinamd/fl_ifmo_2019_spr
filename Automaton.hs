@@ -21,5 +21,24 @@ data Automaton s q = Automaton { sigma     :: Set s
 -- * Any of the terminal states is not a state
 -- * Delta function is defined on not-a-state or not-a-symbol-from-sigma
 -- Pick appropriate types for s and q
--- parseAutomaton :: String -> Maybe (Automaton ? ?)
+parseAutomaton :: String -> Either String (Automaton s q)
 parseAutomaton = undefined
+
+
+-- Checks if the automaton is deterministic (only one transition for each state and each input symbol)
+isDFA :: Automaton a b -> Bool
+isDFA = undefined
+
+-- Checks if the automaton is nondeterministic (eps-transition or multiple transitions for a state and a symbol)
+isNFA :: Automaton a b -> Bool
+isNFA = undefined
+
+-- Checks if the automaton is complete (there exists a transition for each state and each input symbol)
+isComplete :: Automaton a b -> Bool 
+isComplete = undefined
+
+-- Checks if the automaton is minimal (only for DFAs: the number of states is minimal)
+isMinimal :: Automaton a b -> Bool
+isMinimal = undefined
+
+
