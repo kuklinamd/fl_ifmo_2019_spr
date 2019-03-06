@@ -28,8 +28,8 @@ data Automaton s q = Automaton { sigma     :: Set s
 -- * Any of the terminal states is not a state
 -- * Delta function is defined on not-a-state or not-a-symbol-from-sigma
 -- Pick appropriate types for s and q
---parseAutomaton :: String -> Maybe (Automaton Char Integer)
-parseAutomaton s = runParser parseLists s  --join $ checkAutomation <$> fst' (runParser parseLists s)
+parseAutomaton :: String -> Maybe (Automaton String String)
+parseAutomaton s = join $ checkAutomation <$> fst' (runParser parseLists s)
   where
     fst' :: Maybe ([a1], a2) -> Maybe a2
     fst' (Just ([], auto)) = Just auto
@@ -76,7 +76,7 @@ parseAutomaton s = runParser parseLists s  --join $ checkAutomation <$> fst' (ru
               toTermState termList,
               toDelta deltList)
 
-    parseSymbolList = parseList (betweenSpaces symbol) delim lbr rbr
+    parseSymbolList = parseList (betweenSpaces (some symbol)) delim lbr rbr
 
     --parseNumList n = parseList number delim lbr rbr n
 
@@ -87,11 +87,11 @@ parseAutomaton s = runParser parseLists s  --join $ checkAutomation <$> fst' (ru
     parseDeltaList = parseList parseTriple delim lbr rbr 0
 
     parseTriple = char '(' *> do {
-      s1 <- betweenSpaces symbol;
+      s1 <- betweenSpaces (some symbol);
       betweenSpaces $ char ',';
-      symb <- betweenSpaces symbol;
+      symb <- betweenSpaces (some symbol);
       betweenSpaces $ char ',';
-      s2 <- betweenSpaces symbol;
+      s2 <- betweenSpaces (some symbol);
       pure (s1, symb, s2)} <* char ')'
 
 
