@@ -1,16 +1,14 @@
 module Combinators where
-
+    
 import Control.Applicative
 import Control.Arrow (second)
 
-type ParseError = String
+data Position = Position { line :: Integer, symb :: Integer }
+data Stream s = Stream { pos :: Position, content :: s }
 
--- Parsing result is either an Stringor message or some payload and a suffix of the input which is yet to be parsed
-newtype Parser str ok = Parser { runParser :: str -> Either [ParseError] (str, ok) }
+type ParseError = [String]
 
--- Parser which always succeedes consuming no input
-success :: ok -> Parser str ok
-success ok = Parser $ \s -> Right (s, ok)
+newtype Parser tok ok = Parser { runParser :: tok -> Either ParseError (tok, ok) }
 
 instance Functor (Parser str) where
     fmap f p = Parser $ \s ->
@@ -20,8 +18,7 @@ instance Functor (Parser str) where
 
 instance Applicative (Parser str) where
     pure a = Parser $ \str -> Right (str, a)
-    -- Applicative sequence combinator
-    --(<*>) :: Parser str (a -> b) -> Parser str a -> Parser str b
+
     (Parser p) <*> (Parser q) = Parser $ \s -> do
         (s', ok') <- p s
         (s'', ok'') <- q s'
@@ -29,13 +26,11 @@ instance Applicative (Parser str) where
 
 instance Alternative (Parser str) where
     empty = Parser $ \_ -> empty
-    --(<|>) :: Parser str ok -> Parser str ok -> Parser str ok
     p <|> q = Parser $ \s ->
       case runParser p s of
         Left _ -> runParser q s
         Right x -> Right x
 
--- Monadic sequence combinator
 instance Monad (Parser str) where
     return = pure
     (Parser p) >>= k = Parser $ \s -> do
@@ -48,14 +43,12 @@ instance Monoid err => Alternative (Either err) where
     Left _ <|> Right a = Right a
     Left e1 <|> Left e2 = Left $ e1 <> e2
 
--- Checks if the first element of the input is the given token
 token :: Eq token => token -> Parser [token] token
 token t = Parser $ \s ->
   case s of
     (t' : s') | t == t' -> Right (s', t)
     _ -> Left ["Given token stream doesn't match."]
 
--- Checks if the first character of the string is the one given
 char :: Char -> Parser String Char
 char = token
 
