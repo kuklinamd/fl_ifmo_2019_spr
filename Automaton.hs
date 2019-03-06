@@ -21,15 +21,23 @@ data Automaton s q = Automaton { sigma     :: Set s
 
 -- Checks if the automaton is deterministic (only one transition for each state and each input symbol)
 isDFA :: Automaton a b -> Bool
-isDFA = undefined
+isDFA (Automaton _ _ _ _ delta) = all check $ Map.toList delta
+  where
+    check ((_, Nothing), _) = False
+    check ((q, Just s), sts) = Set.size sts == 1
 
 -- Checks if the automaton is nondeterministic (eps-transition or multiple transitions for a state and a symbol)
 isNFA :: Automaton a b -> Bool
-isNFA = undefined
+isNFA (Automaton _ _ _ _ delta) = any check $ Map.toList delta
+  where
+    check ((_, Nothing), _) = True
+    check ((q, Just s), sts) = Set.size sts > 1
 
 -- Checks if the automaton is complete (there exists a transition for each state and each input symbol)
-isComplete :: Automaton a b -> Bool 
-isComplete = undefined
+isComplete :: (Ord a, Ord b) => Automaton a b -> Bool
+isComplete (Automaton sig sts _ _ delta) = all check ((,) <$> Set.toList sts <*> Set.toList sig)
+  where
+    check (sig, st) = isJust $ Map.lookup (sig, Just st) delta
 
 -- Checks if the automaton is minimal (only for DFAs: the number of states is minimal)
 isMinimal :: Automaton a b -> Bool
@@ -119,6 +127,12 @@ parseAutomaton s = checkAutomation <$> snd <$> (runParser parseLists s)
     lbr    = betweenSpaces $ char '<'
     rbr    = betweenSpaces $ char '>'
 
-
 testD = "<a,b,c,d>,<1,2,3,4>,<1>,<3,4>,<(1,a,3),(2,c,4)>"
 testND = "<a,b,c,d>,<1,2,3,4>,<1>,<3,4>,<(1,a,3),(1,epsilon,4),(2,c,4)>"
+testC = "<a, b>, <1, 2>, <1>, <2>, <(1, a, 2), (1, b, 1), (2, a, 1), (2, b, 2)>"
+
+right (Right a) = a
+
+testDFA = isDFA $ fromJust (right $ parseAutomaton testD)
+testNFA = isNFA $ fromJust (right $ parseAutomaton testND)
+testComplete = isComplete $ fromJust (right $ parseAutomaton testC)
