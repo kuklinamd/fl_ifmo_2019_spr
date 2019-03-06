@@ -1,5 +1,15 @@
-module Combinators where
-    
+module Combinators (
+      Parser(..),
+      ParseError,
+      runParser,
+      betweenSpaces,
+      char,
+      orChar,
+      some,
+      many,
+      sepBy
+    ) where
+        
 import Control.Applicative
 import Control.Arrow (second)
 
@@ -21,7 +31,7 @@ uncons :: String -> Maybe Char
 uncons [] = Nothing
 uncons (c:cs) = Just c
 
-type ParseError = [String]
+type ParseError = String
 
 newtype Parser tok ok = Parser { runStreamParser :: Stream tok -> Either ParseError (Stream tok, ok) }
 
@@ -65,10 +75,13 @@ char :: Char -> Parser String Char
 char t = Parser $ \(Stream pos content) ->
   case content of
       (hd : tl) | hd == t -> Right (Stream (incPos hd pos) tl, hd)
-      _ -> Left $ pure $ show pos ++ ": symbols doesn't match"
+      _ -> Left $ show pos ++ ": symbol" ++ printU (uncons content) ++ " doesn't match " ++ show t
   where
     incPos '\n' = incLine . incSymb
     incPos _ = incSymb
+
+    printU Nothing = ""
+    printU (Just c) = " " ++ show c
 
 string :: String -> Parser String String
 string [] = pure []
