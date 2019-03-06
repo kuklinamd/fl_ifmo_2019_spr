@@ -4,15 +4,33 @@ import Control.Applicative
 import Control.Arrow (second)
 
 data Position = Position { line :: Integer, symb :: Integer }
-data Stream s = Stream { pos :: Position, content :: s }
+
+incSymb :: Position -> Position
+incSymb (Position line symb) = Position line (succ symb)
+
+incLine :: Position -> Position
+incLine (Position line symb) = Position (succ line) symb
+
+instance Show Position where
+    show (Position l s) = "(" ++ show l ++ ", " ++ show s ++ ")"
+
+data Stream s = Stream { pos :: Position, content :: s } deriving Show
+
+
+uncons :: String -> Maybe Char
+uncons [] = Nothing
+uncons (c:cs) = Just c
 
 type ParseError = [String]
 
-newtype Parser tok ok = Parser { runParser :: tok -> Either ParseError (tok, ok) }
+newtype Parser tok ok = Parser { runStreamParser :: Stream tok -> Either ParseError (Stream tok, ok) }
+
+runParser :: Parser tok ok -> tok -> Either ParseError (Stream tok, ok)
+runParser p t = runStreamParser p (Stream (Position 0 0) t)
 
 instance Functor (Parser str) where
     fmap f p = Parser $ \s ->
-      case runParser p s of
+      case runStreamParser p s of
         Right (s', a) -> Right (s', f a)
         Left e -> Left e
 
@@ -27,15 +45,15 @@ instance Applicative (Parser str) where
 instance Alternative (Parser str) where
     empty = Parser $ \_ -> empty
     p <|> q = Parser $ \s ->
-      case runParser p s of
-        Left _ -> runParser q s
+      case runStreamParser p s of
+        Left _ -> runStreamParser q s
         Right x -> Right x
 
 instance Monad (Parser str) where
     return = pure
     (Parser p) >>= k = Parser $ \s -> do
       (s', ok') <- p s
-      runParser (k ok') s'
+      runStreamParser (k ok') s'
 
 instance Monoid err => Alternative (Either err) where
     empty = Left mempty
@@ -43,14 +61,14 @@ instance Monoid err => Alternative (Either err) where
     Left _ <|> Right a = Right a
     Left e1 <|> Left e2 = Left $ e1 <> e2
 
-token :: Eq token => token -> Parser [token] token
-token t = Parser $ \s ->
-  case s of
-    (t' : s') | t == t' -> Right (s', t)
-    _ -> Left ["Given token stream doesn't match."]
-
 char :: Char -> Parser String Char
-char = token
+char t = Parser $ \(Stream pos content) ->
+  case content of
+      (hd : tl) | hd == t -> Right (Stream (incPos hd pos) tl, hd)
+      _ -> Left $ pure $ show pos ++ ": symbols doesn't match"
+  where
+    incPos '\n' = incLine . incSymb
+    incPos _ = incSymb
 
 string :: String -> Parser String String
 string [] = pure []
@@ -74,7 +92,6 @@ number :: Parser String Integer
 number = read <$> some digit
   where
     digit = orChar ['0' .. '9']
-
 
 spaces = many $ orChar spaceChars
 spaceChars = ['\t', '\n', '\r', '\f', '\v', ' ']
