@@ -61,7 +61,7 @@ parseAutomaton s = runParser parseLists s  --join $ checkAutomation <$> fst' (ru
     toDelta ((src,symb,dist):ss) = Map.insert (src,symb) (Just dist) $ toDelta ss
 
     parseLists = betweenSpaces $ do
-      symbList <- parseSymbolList
+      symbList <- parseSymbolList 1
       betweenSpaces $ char ','
       stateList <- parseStateList
       betweenSpaces $ char ','
@@ -76,26 +76,26 @@ parseAutomaton s = runParser parseLists s  --join $ checkAutomation <$> fst' (ru
               toTermState termList,
               toDelta deltList)
 
-    parseSymbolList = parseList (betweenSpaces symbol) delim lbr rbr 0
+    parseSymbolList = parseList (betweenSpaces symbol) delim lbr rbr
 
-    parseNumList n = parseList number delim lbr rbr n
+    --parseNumList n = parseList number delim lbr rbr n
 
-    parseStateList = parseNumList 1
-    parseStartList = parseNumList 1
-    parseTerminalList = parseNumList 1
+    parseStateList = parseSymbolList 1
+    parseStartList = parseSymbolList 1
+    parseTerminalList = parseSymbolList 1
 
     parseDeltaList = parseList parseTriple delim lbr rbr 0
 
     parseTriple = char '(' *> do {
-      s1 <- betweenSpaces number;
+      s1 <- betweenSpaces symbol;
       betweenSpaces $ char ',';
       symb <- betweenSpaces symbol;
       betweenSpaces $ char ',';
-      s2 <- betweenSpaces number;
+      s2 <- betweenSpaces symbol;
       pure (s1, symb, s2)} <* char ')'
 
 
-    symbol = betweenSpaces $ orChar ['a' .. 'z']
+    symbol = betweenSpaces $ orChar $ ['a' .. 'z'] ++ ['A' .. 'Z'] ++ ['0'..'9']
     delim  = betweenSpaces $ char ','
     lbr    = betweenSpaces $ char '<'
     rbr    = betweenSpaces $ char '>'
@@ -104,3 +104,4 @@ testAutomata = "<a,b,c,d>,<1,2,3,4>,<1>,<3,4>,<(1,a,3),(2,b,4)>"
 testAutomataSpaces = " < a , b , c , d > , < 1 , 2 , 3 , 4 > , < 1 > , < 3 , 4 > , < ( 1 , a , 3 ) , ( 2 , b , 4 ) >"
 
 test1 = let res = parseAutomaton testAutomata in isJust res && res == parseAutomaton testAutomataSpaces
+test = "<0, 1>, <A, B, C, D, E, F, G>, <A>, <F, G>,\n <(A, 0, C), (A, 1, B), (B, 0, C), (B, 1, A), (C, 0, D), (C, 1, D), (D, 0, E), (D, 1, F), (E, 0, F), (E, 1, G), (F, 0, F), (F, 1, F), (G, 0, G), (G, 1, F)>"
