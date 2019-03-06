@@ -41,7 +41,8 @@ isComplete (Automaton sig sts _ _ delta) = all check ((,) <$> Set.toList sts <*>
 
 -- Checks if the automaton is minimal (only for DFAs: the number of states is minimal)
 isMinimal :: Automaton a b -> Bool
-isMinimal = undefined
+isMinimal a | not (isDFA a) = False
+isMinimal (Automaton sig sts init term delta) = error "`isMinimal` is not implemented"
 
 -- Top level function: parses input string, checks that it is an automaton, and then returns it.
 -- Should return Nothing, if there is a syntax error or the automaton is not a correct automaton.
