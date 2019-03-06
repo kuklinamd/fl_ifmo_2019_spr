@@ -1,6 +1,6 @@
 module Automaton where
 
-import qualified Data.Map.Lazy as Map
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
 type Set = Set.Set
