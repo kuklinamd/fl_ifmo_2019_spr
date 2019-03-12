@@ -8,7 +8,8 @@ module Combinators (
       some,
       many,
       sepBy,
-      eof
+      eof,
+      string
     ) where
         
 import Control.Applicative
