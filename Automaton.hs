@@ -23,16 +23,19 @@ isDFA (Automaton _ _ _ _ delta) = all check $ Map.toList delta
     check ((_, Nothing), _) = False
     check ((q, Just s), sts) = Set.size sts == 1
 
--- Checks if the automaton is nondeterministic (eps-transition or multiple transitions for a state and a symbol)
 isNFA :: Automaton a b -> Bool
-isNFA a@(Automaton _ _ _ _ delta) = isDFA a || any check (Map.toList delta)
+isNFA _ = True
+
+-- Checks if the automaton is nondeterministic (eps-transition or multiple transitions for a state and a symbol)
+isNFAUsefull :: Automaton a b -> Bool
+isNFAUsefull a@(Automaton _ _ _ _ delta) = any check (Map.toList delta)
   where
     check ((_, Nothing), _) = True
     check ((q, Just s), sts) = Set.size sts > 1
 
 -- Checks if the automaton is complete (there exists a transition for each state and each input symbol)
 isComplete :: (Ord a, Ord b) => Automaton a b -> Bool
-isComplete a@(Automaton sig sts _ _ delta) | not (isNFA a) = all check ((,) <$> Set.toList sts <*> Set.toList sig)
+isComplete a@(Automaton sig sts _ _ delta) | not (isNFAUsefull a) = all check ((,) <$> Set.toList sts <*> Set.toList sig)
   where
     check (sig, st) = isJust $ Map.lookup (sig, Just st) delta
 isComplete _ = False
@@ -142,3 +145,5 @@ Right (Just aut) = parseAutomaton autTxt
 
 reachTxt = "<0,1>, <a,b,c,d,e,f,g,h>, <a>, <f,g>, <(a,0,h),(a,1,b),(b,1,a),(b,0,h),(h,0,c),(h,1,c),(c,0,e),(c,1,f),(e,0,f),(e,1,g),(d,0,e),(d,1,f),(g,0,g),(g,1,f),(f,1,f),(f,0,f)>"
 Right (Just reachA) = parseAutomaton reachTxt
+
+Right (Just a) = parseAutomaton "<1>, <a,b>, <a>, <b>, <(a,1,b), (b,1,a)>"
