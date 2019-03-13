@@ -1,6 +1,7 @@
 module Main where
 
 import System.Environment
+import AutomatonType
 import Automaton
 import Text.Printf
 

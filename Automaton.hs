@@ -1,7 +1,10 @@
 module Automaton where
 
+
+import AutomatonType
 import Combinators
 import ListParserCombinator
+import Minimizer
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -11,13 +14,6 @@ import Control.Applicative ((<|>))
 
 type Set = Set.Set
 type Map = Map.Map
-
-data Automaton s q = Automaton { sigma     :: Set s
-                               , states    :: Set q
-                               , initState :: q
-                               , termState :: Set q
-                               , delta     :: Map (q, Maybe s) (Set q)
-                               } deriving Show
 
 
 -- Checks if the automaton is deterministic (only one transition for each state and each input symbol)
@@ -42,9 +38,10 @@ isComplete a@(Automaton sig sts _ _ delta) | not (isNFA a) = all check ((,) <$> 
 isComplete _ = False
 
 -- Checks if the automaton is minimal (only for DFAs: the number of states is minimal)
-isMinimal :: Automaton a b -> Bool
-isMinimal a | not (isDFA a) = False
-isMinimal (Automaton sig sts init term delta) = error "`isMinimal` is not implemented"
+isMinimal :: (Ord a, Ord b) => Automaton a b -> Bool
+isMinimal a | not (isDFA a && isComplete a) = False
+isMinimal a | null $ findEqual a = True
+isMinimal a = False
 
 -- Top level function: parses input string, checks that it is an automaton, and then returns it.
 -- Should return Nothing, if there is a syntax error or the automaton is not a correct automaton.
@@ -139,3 +136,9 @@ right (Right a) = a
 testDFA = isDFA $ fromJust (right $ parseAutomaton testD)
 testNFA = isNFA $ fromJust (right $ parseAutomaton testND)
 testComplete = isComplete $ fromJust (right $ parseAutomaton testC)
+
+autTxt = "<0,1>, <a,b,c,d,e,f,g>, <a>, <f,g>, <(a, 0, c), (a, 1, b), (b, 1, a), (b, 0, c), (c, 0, d), (c, 1, d), (d, 0, e), (d,1,e), (e,1,g), (e,0,f), (g,0,g), (g,1,f), (f, 0, f), (f, 1, f)>"
+Right (Just aut) = parseAutomaton autTxt
+
+reachTxt = "<0,1>, <a,b,c,d,e,f,g,h>, <a>, <f,g>, <(a,0,h),(a,1,b),(b,1,a),(b,0,h),(h,0,c),(h,1,c),(c,0,e),(c,1,f),(e,0,f),(e,1,g),(d,0,e),(d,1,f),(g,0,g),(g,1,f),(f,1,f),(f,0,f)>"
+Right (Just reachA) = parseAutomaton reachTxt
