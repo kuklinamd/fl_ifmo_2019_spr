@@ -7,7 +7,9 @@ module Combinators (
       orChar,
       some,
       many,
-      sepBy
+      sepBy,
+      eof,
+      string
     ) where
         
 import Control.Applicative
@@ -112,3 +114,6 @@ spaceChars = ['\t', '\n', '\r', '\f', '\v', ' ']
 betweenSpaces = between spaces
 
 between b p = b *> p <* b
+
+eof :: Parser String ()
+eof = Parser $ \s -> if null (content s) then Right (s, ()) else Left "Parse: input isn't eof."

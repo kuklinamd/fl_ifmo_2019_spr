@@ -15,5 +15,5 @@ parseList elem delim lbr rbr num = Parser $ \s -> do
     let Parser p = lbr *> sepBy elem delim <* rbr
     (s', elems) <- p s
     if length elems < num
-    then empty
+    then Left "There are less elements than needed."
     else pure (s', elems)
