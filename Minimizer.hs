@@ -1,4 +1,4 @@
-module Minimizer (findEqual) where
+module Minimizer {-(findEqual, minimize, newDelta)-} where
     
 import AutomatonType
 
@@ -8,12 +8,47 @@ import qualified Data.Sequence as Seq
 
 import qualified Data.List as List
 
-import Debug.Trace
-
 type Seq = Seq.Seq
 
+-- TODO: states may be something that's not monoid.
+minimize :: (Ord q, Ord s) => Automaton s q -> Automaton s (Set q)
+minimize a@(Automaton sig st init term dlt) = let
+    -- List of sets, that contains equal states.
+    eq = findEqual a
+    -- Set of not equals states.
+    rest = restStates st eq
+    lrest = Set.singleton <$> Set.toList rest
+    newStates = eq ++ lrest
+
+    -- Set of names of new states.
+    newInit   = newInitSet $ filter (Set.member init) eq
+    newTerm   = Set.singleton term
+  in Automaton sig (Set.fromList newStates) newInit newTerm (newDelta dlt newStates newStates Map.empty)
+  where
+    restStates st [] = st
+    restStates st (e:eq) = restStates (st Set.\\ e) eq
+
+    newInitSet [] = Set.singleton init
+    newInitSet (s:[]) = s
+    newInitSet _ = error $ "Init state more than at one equals states."
+
+    newDelta dlt st [] mp = mp
+    newDelta dlt st (s:sts) mp = let
+        trans = map (\k -> Map.filterWithKey (findPartKey k)  dlt) $ Set.toList s
+        in newDelta dlt st sts $ foldr (\t mp -> f mp (Map.toList t)) mp trans
+        where
+          f mp [] = mp
+          f mp (((_ , symb), s2):ms) = let
+              ns = findNewState st (Set.elemAt 0 s2)
+              mp' = Map.insert (s, symb) (Set.singleton ns) mp
+           in f mp' ms
+
+    findNewState [] s2 = error "Empty list of states!"
+    findNewState (s:st) s2 | s2 `Set.member` s = s
+    findNewState (s:st) s2 = findNewState st s2
+
 findEqual :: (Ord q, Ord s) => Automaton s q -> [Set q]
-findEqual a = toSet (fst <$> Map.toList (Map.filter (\a -> not a) $ go tabl que))
+findEqual a = termState a : toSet (fst <$> Map.toList (Map.filter (\a -> not a) $ go tabl que))
   where
     toSet l = toSet' ((\(a1, a2) -> Set.fromList [a1, a2]) <$> l)
 
