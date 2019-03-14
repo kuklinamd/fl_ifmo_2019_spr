@@ -10,7 +10,6 @@ import qualified Data.List as List
 
 type Seq = Seq.Seq
 
--- TODO: states may be something that's not monoid.
 minimize :: (Ord q, Ord s) => Automaton s q -> Automaton s (Set q)
 minimize a@(Automaton sig st init term dlt) = let
     -- List of sets, that contains equal states.
