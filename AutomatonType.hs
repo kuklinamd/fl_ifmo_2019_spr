@@ -13,4 +13,4 @@ data Automaton s q = Automaton { sigma     :: Set s
                                , initState :: q
                                , termState :: Set q
                                , delta     :: Delta q s
-                               } deriving Show
+                               } deriving (Show, Eq)
