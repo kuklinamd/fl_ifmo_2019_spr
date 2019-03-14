@@ -5,6 +5,7 @@ import AutomatonType
 import Combinators
 import ListParserCombinator
 import Minimizer
+import PrettyAutomaton
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -140,8 +141,11 @@ testDFA = isDFA $ fromJust (right $ parseAutomaton testD)
 testNFA = isNFA $ fromJust (right $ parseAutomaton testND)
 testComplete = isComplete $ fromJust (right $ parseAutomaton testC)
 
-autTxt = "<0,1>, <a,b,c,d,e,f,g>, <a>, <f,g>, <(a, 0, c), (a, 1, b), (b, 1, a), (b, 0, c), (c, 0, d), (c, 1, d), (d, 0, e), (d,1,e), (e,1,g), (e,0,f), (g,0,g), (g,1,f), (f, 0, f), (f, 1, f)>"
+autTxt = "<0,1>, <a,b,c,d,e,f,g>, <a>, <f,g>, <(a, 0, c), (a, 1, b), (b, 1, a), (b, 0, c), (c, 0, d), (c, 1, d), (d, 0, e), (d,1,f), (e,1,g), (e,0,f), (g,0,g), (g,1,f), (f, 0, f), (f, 1, f)>"
 Right (Just aut) = parseAutomaton autTxt
+autMinTxt = "<0, 1>, <ab, c, d, e, fg>, <ab>, <fg>, <(ab, 1, ab), (ab,0,c), (c,0,d), (c,1,d), (d,1,fg),(d,0,e),(e,0,fg),(e,1,fg), (fg,0,fg),(fg,1,fg)>"
+Right (Just autMin) = parseAutomaton autMinTxt
+test = pretty (minimize aut) == autMin
 
 reachTxt = "<0,1>, <a,b,c,d,e,f,g,h>, <a>, <f,g>, <(a,0,h),(a,1,b),(b,1,a),(b,0,h),(h,0,c),(h,1,c),(c,0,e),(c,1,f),(e,0,f),(e,1,g),(d,0,e),(d,1,f),(g,0,g),(g,1,f),(f,1,f),(f,0,f)>"
 Right (Just reachA) = parseAutomaton reachTxt
