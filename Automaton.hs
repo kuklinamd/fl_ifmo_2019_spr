@@ -5,6 +5,7 @@ import AutomatonType
 import Combinators
 import ListParserCombinator
 import Minimizer
+import Completer
 import PrettyAutomaton
 
 import qualified Data.Map.Strict as Map
@@ -22,7 +23,7 @@ isDFA :: Automaton a b -> Bool
 isDFA (Automaton _ _ _ _ delta) = all check $ Map.toList delta
   where
     check ((_, Nothing), _) = False
-    check ((q, Just s), sts) = Set.size sts == 1
+    check ((_, Just _), sts) = Set.size sts == 1
 
 isNFA :: Automaton a b -> Bool
 isNFA _ = True
@@ -32,7 +33,7 @@ isNFAUsefull :: Automaton a b -> Bool
 isNFAUsefull a@(Automaton _ _ _ _ delta) = any check (Map.toList delta)
   where
     check ((_, Nothing), _) = True
-    check ((q, Just s), sts) = Set.size sts > 1
+    check ((_, Just _), sts) = Set.size sts > 1
 
 -- Checks if the automaton is complete (there exists a transition for each state and each input symbol)
 isComplete :: (Ord a, Ord b) => Automaton a b -> Bool
@@ -77,19 +78,19 @@ parseAutomaton s = checkAutomation <$> snd <$> (runParser parseLists s)
 
     toSigma  = Set.fromList
 
-    toStates = Set.fromList
+    toStates = Set.fromList . fmap State
 
-    toInitState (q:[]) = Just q
+    toInitState (q:[]) = Just (State q)
     toInitState _ = Nothing
 
-    toTermState = Set.fromList
+    toTermState = Set.fromList . fmap State
 
     toDelta [] = Map.empty
     toDelta ss = toDelta' ((\xs@((a1, a2, _):_) -> (a1, a2, (\(_,_,b) -> b) <$> xs)) <$> groupBy (\(a1, a2,_) (b1, b2,_) -> a1 == b1 && a2 == b2) ss)
 
     toDelta' [] = Map.empty
-    toDelta' ((src,symb,dists):ss) | symb == "\\epsilon" = Map.insert (src,Nothing) (Set.fromList dists) $ toDelta' ss
-                                   | otherwise = Map.insert (src, Just symb) (Set.fromList dists) $ toDelta' ss
+    toDelta' ((src,symb,dists):ss) | symb == "\\epsilon" = Map.insert (State src,Nothing) (Set.fromList $ State <$> dists) $ toDelta' ss
+                                   | otherwise = Map.insert (State src, Just symb) (Set.fromList $ State <$> dists) $ toDelta' ss
 
     parseLists = betweenSpaces $ do
       symbList <- parseSymbolList 1

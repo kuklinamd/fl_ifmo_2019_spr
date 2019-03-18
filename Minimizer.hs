@@ -10,7 +10,7 @@ import qualified Data.List as List
 
 type Seq = Seq.Seq
 
-minimize :: (Ord q, Ord s) => Automaton s q -> Automaton s (Set q)
+minimize :: (Ord q, Ord s) => Automaton s q -> Automaton s (Set (State q))
 minimize a@(Automaton sig st init term dlt) = let
     -- List of sets, that contains equal states.
     eq = findEqual a
@@ -20,9 +20,9 @@ minimize a@(Automaton sig st init term dlt) = let
     newStates = eq ++ lrest
 
     -- Set of names of new states.
-    newInit   = newInitSet $ filter (Set.member init) eq
-    newTerm   = Set.singleton term
-  in Automaton sig (Set.fromList newStates) newInit newTerm (newDelta dlt newStates newStates Map.empty)
+    newInit   = State $ newInitSet $ filter (Set.member init) eq
+    newTerm   = Set.singleton (State term)
+  in Automaton sig (Set.fromList $ State <$> newStates) newInit newTerm (newDelta dlt newStates newStates Map.empty)
   where
     restStates st [] = st
     restStates st (e:eq) = restStates (st Set.\\ e) eq
@@ -39,14 +39,14 @@ minimize a@(Automaton sig st init term dlt) = let
           f mp [] = mp
           f mp (((_ , symb), s2):ms) = let
               ns = findNewState st (Set.elemAt 0 s2)
-              mp' = Map.insert (s, symb) (Set.singleton ns) mp
+              mp' = Map.insert (State s, symb) (Set.singleton (State ns)) mp
            in f mp' ms
 
     findNewState [] s2 = error "Empty list of states!"
     findNewState (s:st) s2 | s2 `Set.member` s = s
     findNewState (s:st) s2 = findNewState st s2
 
-findEqual :: (Ord q, Ord s) => Automaton s q -> [Set q]
+findEqual :: (Ord q, Ord s) => Automaton s q -> [Set (State q)]
 findEqual a = termState a : toSet (fst <$> Map.toList (Map.filter (\a -> not a) $ go tabl que))
   where
     toSet l = toSet' ((\(a1, a2) -> Set.fromList [a1, a2]) <$> l)
