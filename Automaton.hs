@@ -8,7 +8,7 @@ import Minimizer
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Data.List (groupBy)
+import Data.List (groupBy, sort)
 import Data.Maybe (isJust, fromJust)
 import Control.Applicative ((<|>))
 
@@ -42,9 +42,8 @@ isComplete _ = False
 
 -- Checks if the automaton is minimal (only for DFAs: the number of states is minimal)
 isMinimal :: (Ord a, Ord b) => Automaton a b -> Bool
-isMinimal a | not (isDFA a && isComplete a) = False
-isMinimal a | null $ findEqual a = True
-isMinimal a = False
+isMinimal a | not (isDFA a) = False
+isMinimal a = null $ findEqual a
 
 -- Top level function: parses input string, checks that it is an automaton, and then returns it.
 -- Should return Nothing, if there is a syntax error or the automaton is not a correct automaton.
@@ -84,7 +83,7 @@ parseAutomaton s = checkAutomation <$> snd <$> (runParser parseLists s)
     toTermState = Set.fromList
 
     toDelta [] = Map.empty
-    toDelta ss = toDelta' ((\xs@((a1, a2, _):_) -> (a1, a2, (\(_,_,b) -> b) <$> xs)) <$> groupBy (\(a1, a2,_) (b1, b2,_) -> a1 == b1 && a2 == b2) ss)
+    toDelta ss = toDelta' ((\xs@((a1, a2, _):_) -> (a1, a2, (\(_,_,b) -> b) <$> xs)) <$> groupBy (\(a1, a2,_) (b1, b2,_) -> a1 == b1 && a2 == b2) (sort ss))
 
     toDelta' [] = Map.empty
     toDelta' ((src,symb,dists):ss) | symb == "\\epsilon" = Map.insert (src,Nothing) (Set.fromList dists) $ toDelta' ss
@@ -114,7 +113,6 @@ parseAutomaton s = checkAutomation <$> snd <$> (runParser parseLists s)
     parseTerminalList = parseSymbolList 0
 
     parseDeltaList = parseList parseTriple delim lbr rbr 0
-
     parseTriple = char '(' *> do {
       s1 <- betweenSpaces (some symbol);
       betweenSpaces $ char ',';
@@ -147,3 +145,11 @@ reachTxt = "<0,1>, <a,b,c,d,e,f,g,h>, <a>, <f,g>, <(a,0,h),(a,1,b),(b,1,a),(b,0,
 Right (Just reachA) = parseAutomaton reachTxt
 
 Right (Just a) = parseAutomaton "<1>, <a,b>, <a>, <b>, <(a,1,b), (b,1,a)>"
+
+minTxt = "<a,b>, <0,1,2,3,4,5>, <0>, <1,3,4,5>, <(0, a, 1), (1, a, 2), (2, a, 3), (3, a, 4), (4, a, 5), (5, a, 0), (0, b, 5), (5, b, 4), (4, b, 3), (3, b, 2), (2, b, 1), (1, b, 0) >"
+Right (Just minA) = parseAutomaton minTxt
+
+nfaTxt = "<a, b>, <1, 2, 3>, <1>, <1,3>, <(1, a, 1), (2, b, 1), (1, b, 2), (2, b, 2), (2, a, 3), (3, a, 2), (3, b, 3)>"
+Right (Just nfaA) = parseAutomaton nfaTxt
+
+deltaTxt ="<(1, a, 1), (2, b, 1), (1, b, 2), (2, b, 2), (2, a, 3), (3, a, 2), (3, b, 3)>"

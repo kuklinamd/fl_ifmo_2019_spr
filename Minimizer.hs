@@ -1,4 +1,4 @@
-module Minimizer (findEqual) where
+module Minimizer {-(findEqual)-} where
     
 import AutomatonType
 
@@ -8,11 +8,15 @@ import qualified Data.Sequence as Seq
 
 import qualified Data.List as List
 
+import Control.Applicative (liftA2)
+
 import Debug.Trace
 
 type Seq = Seq.Seq
 
 findEqual :: (Ord q, Ord s) => Automaton s q -> [Set q]
+--findEqual a = toSet (fst <$> Map.toList (Map.filter (\a -> not a) $ go tabl que))
+--findEqual :: (Ord s, Ord q, Show s, Show q) => Automaton s q -> Map (q, q) Bool
 findEqual a = toSet (fst <$> Map.toList (Map.filter (\a -> not a) $ go tabl que))
   where
     toSet l = toSet' ((\(a1, a2) -> Set.fromList [a1, a2]) <$> l)
@@ -61,18 +65,32 @@ findEqual a = toSet (fst <$> Map.toList (Map.filter (\a -> not a) $ go tabl que)
        key  = (r, s)
        keyR = (s, r)
 
-       func Nothing = Just True
-       func _  = Just True
+       func _ = Just True
     markTable' tabl (_:rs) = markTable' tabl rs
 
     mapDiff = Map.differenceWith (\a b -> if a == False && b == True then Just b else Nothing)
 
-    -- In t only True
     updateQue t q = foldr (\a b -> b Seq.|> a) q (fst <$> Map.toList t)
 
 
 initTable :: (Ord q) => Set q -> Set q -> (Map (q, q) Bool, Seq (q,q))
-initTable sts term = (Map.fromList lst, Seq.fromList {-(fst <$> lst)-} $ filterUniqSet sts term)
+initTable sts term = (,) (Map.fromList tabl) (Seq.fromList queue)
+  where
+    tabl = markDiff term sts
+    queue = fst <$> filter snd tabl
+
+    xor True True = False
+    xor False False = False
+    xor _ _ = True
+    isTerm term q1 q2 = let b1 = Set.member q1 term
+                            b2 = Set.member q2 term
+                        in xor b1 b2
+    markDiff term s1 = (\q@(q1, q2) -> if isTerm term q1 q2 then (q, True) else (q, False)) <$> allStates s1
+    allStates s1 = filter (uncurry (/=)) $ allWithAll s1 s1
+    allWithAll s1 s2 = liftA2 (,) (Set.toList s1) (Set.toList s2)
+
+{-
+initTable sts term = (Map.fromList lst, Seq.fromList {-(fst <$> lst)-} $ filterUniqSet term sts term)
   where
     stlist = Set.toList sts
 
@@ -81,9 +99,10 @@ initTable sts term = (Map.fromList lst, Seq.fromList {-(fst <$> lst)-} $ filterU
     toMapList (q@(q1,q2):qs) | Set.member q2 term = (q, True) : toMapList qs
     toMapList (q@(q1,q2):qs) = (q, False) : toMapList qs
 
-    lst = toMapList $ filterUniqSet sts sts
+    lst = toMapList $ filterUniqSet term sts sts
 
-    filterUniqSet l1 l2 = filter (\(f,s) -> f /= s && not (f `Set.member` term && s `Set.member` term)) ((,) <$> Set.toList l1 <*> Set.toList l2)
+    filterUniqSet term l1 l2 = filter (\(f,s) -> f /= s && not (f `Set.member` term && s `Set.member` term)) ((,) <$> Set.toList l1 <*> Set.toList l2)
+-}
 
 reachable :: (Ord q, Ord s) => q -> Delta q s -> Set q
 reachable _ dlt | Map.null dlt = Set.empty
