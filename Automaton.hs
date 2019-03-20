@@ -152,3 +152,5 @@ reachTxt = "<0,1>, <a,b,c,d,e,f,g,h>, <a>, <f,g>, <(a,0,h),(a,1,b),(b,1,a),(b,0,
 Right (Just reachA) = parseAutomaton reachTxt
 
 Right (Just a) = parseAutomaton "<1>, <a,b>, <a>, <b>, <(a,1,b), (b,1,a)>"
+
+Right (Just b) = parseAutomaton "<1, 0>, <a, b>, <a>, <b>, <(a,1,b)>"
