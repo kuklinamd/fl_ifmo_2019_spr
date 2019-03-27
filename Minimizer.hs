@@ -67,7 +67,7 @@ minimizeCommon a@(Automaton sig st init term dlt) = let
     findNewState (s:st) s2 = findNewState st s2
 
 findEqual :: (Ord q, Ord s) => Automaton s q -> [Set (State q)]
-findEqual a = termState a : toSet (fst <$> Map.toList (Map.filter (\a -> not a) $ go tabl que))
+findEqual a = toSet (fst <$> Map.toList (Map.filter (\a -> not a) $ go tabl que))
   where
     toSet l = toSet' ((\(a1, a2) -> Set.fromList [a1, a2]) <$> l)
 

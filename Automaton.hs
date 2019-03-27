@@ -5,12 +5,10 @@ import AutomatonType
 import Combinators
 import ListParserCombinator
 import Minimizer
-import Completer
-import PrettyAutomaton
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Data.List (groupBy)
+import Data.List (groupBy, sort)
 import Data.Maybe (isJust, fromJust)
 import Control.Applicative ((<|>))
 
@@ -25,28 +23,27 @@ isDFA (Automaton _ _ _ _ delta) = all check $ Map.toList delta
     check ((_, Nothing), _) = False
     check ((_, Just _), sts) = Set.size sts == 1
 
+-- Checks if the automaton is nondeterministic (eps-transition or multiple transitions for a state and a symbol)
 isNFA :: Automaton a b -> Bool
 isNFA _ = True
-
--- Checks if the automaton is nondeterministic (eps-transition or multiple transitions for a state and a symbol)
-isNFAUsefull :: Automaton a b -> Bool
-isNFAUsefull a@(Automaton _ _ _ _ delta) = any check (Map.toList delta)
-  where
-    check ((_, Nothing), _) = True
-    check ((_, Just _), sts) = Set.size sts > 1
 
 -- Checks if the automaton is complete (there exists a transition for each state and each input symbol)
 isComplete :: (Ord a, Ord b) => Automaton a b -> Bool
 isComplete a@(Automaton sig sts _ _ delta) | not (isNFAUsefull a) = all check ((,) <$> Set.toList sts <*> Set.toList sig)
   where
     check (sig, st) = isJust $ Map.lookup (sig, Just st) delta
+
+    isNFAUsefull :: Automaton a b -> Bool
+    isNFAUsefull a@(Automaton _ _ _ _ delta) = any check (Map.toList delta)
+      where
+        check ((_, Nothing), _) = True
+        check ((_, Just _), sts) = Set.size sts > 1
 isComplete _ = False
 
 -- Checks if the automaton is minimal (only for DFAs: the number of states is minimal)
 isMinimal :: (Ord a, Ord b) => Automaton a b -> Bool
-isMinimal a | not (isDFA a && isComplete a) = False
-isMinimal a | null $ findEqual a = True
-isMinimal a = False
+isMinimal a | not (isDFA a) = False
+isMinimal a = null $ findEqual a
 
 -- Top level function: parses input string, checks that it is an automaton, and then returns it.
 -- Should return Nothing, if there is a syntax error or the automaton is not a correct automaton.
@@ -86,7 +83,7 @@ parseAutomaton s = checkAutomation <$> snd <$> (runParser parseLists s)
     toTermState = Set.fromList . fmap State
 
     toDelta [] = Map.empty
-    toDelta ss = toDelta' ((\xs@((a1, a2, _):_) -> (a1, a2, (\(_,_,b) -> b) <$> xs)) <$> groupBy (\(a1, a2,_) (b1, b2,_) -> a1 == b1 && a2 == b2) ss)
+    toDelta ss = toDelta' ((\xs@((a1, a2, _):_) -> (a1, a2, (\(_,_,b) -> b) <$> xs)) <$> groupBy (\(a1, a2,_) (b1, b2,_) -> a1 == b1 && a2 == b2) (sort ss))
 
     toDelta' [] = Map.empty
     toDelta' ((src,symb,dists):ss) | symb == "\\epsilon" = Map.insert (State src,Nothing) (Set.fromList $ State <$> dists) $ toDelta' ss
@@ -146,7 +143,6 @@ autTxt = "<0,1>, <a,b,c,d,e,f,g>, <a>, <f,g>, <(a, 0, c), (a, 1, b), (b, 1, a), 
 Right (Just aut) = parseAutomaton autTxt
 autMinTxt = "<0, 1>, <ab, c, d, e, fg>, <ab>, <fg>, <(ab, 1, ab), (ab,0,c), (c,0,d), (c,1,d), (d,1,fg),(d,0,e),(e,0,fg),(e,1,fg), (fg,0,fg),(fg,1,fg)>"
 Right (Just autMin) = parseAutomaton autMinTxt
-test = pretty (minimize aut) == autMin
 
 reachTxt = "<0,1>, <a,b,c,d,e,f,g,h>, <a>, <f,g>, <(a,0,h),(a,1,b),(b,1,a),(b,0,h),(h,0,c),(h,1,c),(c,0,e),(c,1,f),(e,0,f),(e,1,g),(d,0,e),(d,1,f),(g,0,g),(g,1,f),(f,1,f),(f,0,f)>"
 Right (Just reachA) = parseAutomaton reachTxt
@@ -154,3 +150,5 @@ Right (Just reachA) = parseAutomaton reachTxt
 Right (Just a) = parseAutomaton "<1>, <a,b>, <a>, <b>, <(a,1,b), (b,1,a)>"
 
 Right (Just b) = parseAutomaton "<1, 0>, <a, b>, <a>, <b>, <(a,1,b)>"
+
+Right (Just c) = parseAutomaton "<aa>, <stone, sttwo>, <stone>, <sttwo>, <(stone, aa, sttwo)>"

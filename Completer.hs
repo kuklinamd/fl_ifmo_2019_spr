@@ -1,6 +1,7 @@
-module Completer where
+module Completer (complete) where
 
 import AutomatonType
+import Automaton
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -11,11 +12,12 @@ import Debug.Trace
 
 
 complete :: (Ord s, Ord q, Show q, Show s) => Automaton s q -> Automaton s q
+complete a | isComplete a = a
 complete (Automaton sig sts init term delt) = Automaton sig sts' init term' delt'
   where
     sts'  = Set.insert Bot sts
     term' = Set.insert Bot term
-    delt' = Set.foldr (\s dl -> f s dl) delt sts
+    delt' = Set.foldr (\s dl -> f s dl) delt sts'
 
     f st dlt = let
         mp = Map.filterWithKey (findPartKey st) dlt
