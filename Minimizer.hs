@@ -8,10 +8,30 @@ import qualified Data.Sequence as Seq
 
 import qualified Data.List as List
 
+import Control.Applicative (liftA2)
+
 type Seq = Seq.Seq
 
-minimize :: (Ord q, Ord s) => Automaton s q -> Automaton s (Set (State q))
-minimize a@(Automaton sig st init term dlt) = let
+minimize :: (Ord q, Ord s) => Automaton s [q] -> Automaton s [q]
+minimize = toSimple . minimizeCommon
+  where
+    toSimple (Automaton sig sts init term dlt) = Automaton sig sts' init' term' dlt'
+      where
+        sts' = Set.map toSingleState sts
+        init' = toSingleState init
+        term' = Set.map toSingleState term
+        dlt' = f dlt
+
+-- type Delta q s = Map (q, Maybe s) (Set q)
+f :: (Ord q, Ord s) => Delta (State (Set (State [q]))) s -> Delta (State [q]) s
+f = Map.map (Set.map toSingleState) . Map.mapKeys (\(a, b) -> (toSingleState a, b))
+
+toSingleState :: (Ord q) => State (Set (State [q])) -> State [q]
+toSingleState (State s) = (State . concatMap state . Set.toList) s
+toSingleState Bot = Bot
+
+minimizeCommon :: (Ord q, Ord s) => Automaton s q -> Automaton s (Set (State q))
+minimizeCommon a@(Automaton sig st init term dlt) = let
     -- List of sets, that contains equal states.
     eq = findEqual a
     -- Set of not equals states.
@@ -95,8 +115,7 @@ findEqual a = termState a : toSet (fst <$> Map.toList (Map.filter (\a -> not a) 
        key  = (r, s)
        keyR = (s, r)
 
-       func Nothing = Just True
-       func _  = Just True
+       func _ = Just True
     markTable' tabl (_:rs) = markTable' tabl rs
 
     mapDiff = Map.differenceWith (\a b -> if a == False && b == True then Just b else Nothing)
@@ -105,6 +124,23 @@ findEqual a = termState a : toSet (fst <$> Map.toList (Map.filter (\a -> not a) 
     updateQue t q = foldr (\a b -> b Seq.|> a) q (fst <$> Map.toList t)
 
 
+initTable :: (Ord q) => Set q -> Set q -> (Map (q, q) Bool, Seq (q,q))
+initTable sts term = (,) (Map.fromList tabl) (Seq.fromList queue)
+  where
+    tabl = markDiff term sts
+    queue = fst <$> filter snd tabl
+
+    xor True True = False
+    xor False False = False
+    xor _ _ = True
+    isTerm term q1 q2 = let b1 = Set.member q1 term
+                            b2 = Set.member q2 term
+                        in xor b1 b2
+    markDiff term s1 = (\q@(q1, q2) -> if isTerm term q1 q2 then (q, True) else (q, False)) <$> allStates s1
+    allStates s1 = filter (uncurry (/=)) $ allWithAll s1 s1
+    allWithAll s1 s2 = liftA2 (,) (Set.toList s1) (Set.toList s2)
+
+{-
 initTable :: (Ord q) => Set q -> Set q -> (Map (q, q) Bool, Seq (q,q))
 initTable sts term = (Map.fromList lst, Seq.fromList {-(fst <$> lst)-} $ filterUniqSet sts term)
   where
@@ -118,6 +154,7 @@ initTable sts term = (Map.fromList lst, Seq.fromList {-(fst <$> lst)-} $ filterU
     lst = toMapList $ filterUniqSet sts sts
 
     filterUniqSet l1 l2 = filter (\(f,s) -> f /= s && not (f `Set.member` term && s `Set.member` term)) ((,) <$> Set.toList l1 <*> Set.toList l2)
+-}
 
 reachable :: (Ord q, Ord s) => q -> Delta q s -> Set q
 reachable _ dlt | Map.null dlt = Set.empty
