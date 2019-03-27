@@ -140,22 +140,6 @@ initTable sts term = (,) (Map.fromList tabl) (Seq.fromList queue)
     allStates s1 = filter (uncurry (/=)) $ allWithAll s1 s1
     allWithAll s1 s2 = liftA2 (,) (Set.toList s1) (Set.toList s2)
 
-{-
-initTable :: (Ord q) => Set q -> Set q -> (Map (q, q) Bool, Seq (q,q))
-initTable sts term = (Map.fromList lst, Seq.fromList {-(fst <$> lst)-} $ filterUniqSet sts term)
-  where
-    stlist = Set.toList sts
-
-    toMapList [] = []
-    toMapList (q@(q1,q2):qs) | Set.member q1 term = (q, True) : toMapList qs
-    toMapList (q@(q1,q2):qs) | Set.member q2 term = (q, True) : toMapList qs
-    toMapList (q@(q1,q2):qs) = (q, False) : toMapList qs
-
-    lst = toMapList $ filterUniqSet sts sts
-
-    filterUniqSet l1 l2 = filter (\(f,s) -> f /= s && not (f `Set.member` term && s `Set.member` term)) ((,) <$> Set.toList l1 <*> Set.toList l2)
--}
-
 reachable :: (Ord q, Ord s) => q -> Delta q s -> Set q
 reachable _ dlt | Map.null dlt = Set.empty
 reachable start dlt = Set.insert start $ Set.unions (go <$> allTrans)
