@@ -1,15 +1,26 @@
-module Completer (complete) where
+module Completer (complete, isComplete) where
 
 import AutomatonType
-import Automaton
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, isJust)
 
 import Debug.Trace
 
+-- Checks if the automaton is complete (there exists a transition for each state and each input symbol)
+isComplete :: (Ord a, Ord b) => Automaton a b -> Bool
+isComplete a@(Automaton sig sts _ _ delta) | not (isNFAUsefull a) = all check ((,) <$> Set.toList sts <*> Set.toList sig)
+  where
+    check (sig, st) = isJust $ Map.lookup (sig, Just st) delta
+
+    isNFAUsefull :: Automaton a b -> Bool
+    isNFAUsefull a@(Automaton _ _ _ _ delta) = any check (Map.toList delta)
+      where
+        check ((_, Nothing), _) = True
+        check ((_, Just _), sts) = Set.size sts > 1
+isComplete _ = False
 
 complete :: (Ord s, Ord q, Show q, Show s) => Automaton s q -> Automaton s q
 complete a | isComplete a = a

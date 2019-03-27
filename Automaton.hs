@@ -5,6 +5,8 @@ import AutomatonType
 import Combinators
 import ListParserCombinator
 import Minimizer
+import Determiner
+import Completer
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -16,34 +18,9 @@ type Set = Set.Set
 type Map = Map.Map
 
 
--- Checks if the automaton is deterministic (only one transition for each state and each input symbol)
-isDFA :: Automaton a b -> Bool
-isDFA (Automaton _ _ _ _ delta) = all check $ Map.toList delta
-  where
-    check ((_, Nothing), _) = False
-    check ((_, Just _), sts) = Set.size sts == 1
-
 -- Checks if the automaton is nondeterministic (eps-transition or multiple transitions for a state and a symbol)
 isNFA :: Automaton a b -> Bool
 isNFA _ = True
-
--- Checks if the automaton is complete (there exists a transition for each state and each input symbol)
-isComplete :: (Ord a, Ord b) => Automaton a b -> Bool
-isComplete a@(Automaton sig sts _ _ delta) | not (isNFAUsefull a) = all check ((,) <$> Set.toList sts <*> Set.toList sig)
-  where
-    check (sig, st) = isJust $ Map.lookup (sig, Just st) delta
-
-    isNFAUsefull :: Automaton a b -> Bool
-    isNFAUsefull a@(Automaton _ _ _ _ delta) = any check (Map.toList delta)
-      where
-        check ((_, Nothing), _) = True
-        check ((_, Just _), sts) = Set.size sts > 1
-isComplete _ = False
-
--- Checks if the automaton is minimal (only for DFAs: the number of states is minimal)
-isMinimal :: (Ord a, Ord b) => Automaton a b -> Bool
-isMinimal a | not (isDFA a) = False
-isMinimal a = null $ findEqual a
 
 -- Top level function: parses input string, checks that it is an automaton, and then returns it.
 -- Should return Nothing, if there is a syntax error or the automaton is not a correct automaton.

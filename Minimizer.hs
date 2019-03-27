@@ -1,6 +1,7 @@
-module Minimizer {-(findEqual, minimize, newDelta)-} where
+module Minimizer (isMinimal, minimize) where
     
 import AutomatonType
+import Determiner (isDFA)
 
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
@@ -11,6 +12,11 @@ import qualified Data.List as List
 import Control.Applicative (liftA2)
 
 type Seq = Seq.Seq
+
+-- Checks if the automaton is minimal (only for DFAs: the number of states is minimal)
+isMinimal :: (Ord a, Ord b) => Automaton a b -> Bool
+isMinimal a | not (isDFA a) = False
+isMinimal a = null $ findEqual a
 
 minimize :: (Ord q, Ord s) => Automaton s [q] -> Automaton s [q]
 minimize = toSimple . minimizeCommon
