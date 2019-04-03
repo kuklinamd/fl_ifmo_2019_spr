@@ -1,10 +1,7 @@
-module Determiner {-(determine, isDFA)-} where
+module Determiner (determine, isDFA) where
 
 import AutomatonType
-
-import Data.Maybe (catMaybes)
-
-import Debug.Trace
+import EpsilonClosure
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -38,13 +35,11 @@ determine a = toSimple (determineCommon a)
     toSingleState (State s) = (State . concatMap state . Set.toList) s
     toSingleState Bot = Bot
 
-
-newTerm' term sts = Set.filter (\s -> any id $ Set.toList $ Set.map (\t -> t `Set.member` (state s)) term) sts
-
-initQueue' init = Seq.singleton (Set.singleton init)
-
 determineCommon :: (Ord q, Ord s) => Automaton s q -> Automaton s (Set (State q))
-determineCommon ~(Automaton sigs sts init term dlt) = Automaton sigs newSts (State newInit) newTerm newDlt
+determineCommon = determineCommon' . epsEliminator
+
+determineCommon' :: (Ord q, Ord s) => Automaton s q -> Automaton s (Set (State q))
+determineCommon' ~(Automaton sigs sts init term dlt) = Automaton sigs newSts (State newInit) newTerm newDlt
     where
       newInit = Set.singleton init
       -- Seq (Set (State q))
