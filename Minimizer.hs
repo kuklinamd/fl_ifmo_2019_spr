@@ -19,7 +19,8 @@ isMinimal a | not (isDFA a) = False
 isMinimal a = null $ findEqual a
 
 minimize :: (Ord q, Ord s) => Automaton s [q] -> Automaton s [q]
-minimize = toSimple . minimizeCommon
+minimize a | isMinimal a = a
+minimize a = toSimple (minimizeCommon a)
   where
     toSimple (Automaton sig sts init term dlt) = Automaton sig sts' init' term' dlt'
       where
