@@ -7,6 +7,7 @@ import ListParserCombinator
 import Minimizer
 import Determiner
 import Completer
+import EpsilonClosure
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -106,7 +107,7 @@ parseAutomaton s = checkAutomation <$> snd <$> (runParser parseLists s)
     rbr    = betweenSpaces $ char '>'
 
 testD = "<a,b,c,d>,<1,2,3,4>,<1>,<3,4>,<(1,a,3),(2,c,4)>"
-testND = "<a,b,c,d>,<1,2,3,4>,<1>,<3,4>,<(1,a,3),(1,\\epsilon,4),(2,c,4)>"
+testND = "<a,b,c,d>,<1,2,3,4>,<1>,<3,4>,<(1,a,3), (1,a,2),(1,\\epsilon,4),(2,c,4), (2,c,1)>"
 testC = "<a, b>, <1, 2>, <1>, <2>, <(1, a, 2), (1, b, 1), (2, a, 1), (2, b, 2)>"
 testA = "<aa, bb, cc>, <stone, sttwo>, <stone>, <>, <>"
 
@@ -123,9 +124,14 @@ Right (Just autMin) = parseAutomaton autMinTxt
 
 reachTxt = "<0,1>, <a,b,c,d,e,f,g,h>, <a>, <f,g>, <(a,0,h),(a,1,b),(b,1,a),(b,0,h),(h,0,c),(h,1,c),(c,0,e),(c,1,f),(e,0,f),(e,1,g),(d,0,e),(d,1,f),(g,0,g),(g,1,f),(f,1,f),(f,0,f)>"
 Right (Just reachA) = parseAutomaton reachTxt
-
 Right (Just a) = parseAutomaton "<1>, <a,b>, <a>, <b>, <(a,1,b), (b,1,a)>"
-
 Right (Just b) = parseAutomaton "<1, 0>, <a, b>, <a>, <b>, <(a,1,b)>"
-
 Right (Just c) = parseAutomaton "<aa>, <stone, sttwo>, <stone>, <sttwo>, <(stone, aa, sttwo)>"
+Right (Just nfa) = parseAutomaton testND
+Right (Just dfa) = parseAutomaton testD
+enfaTxt = "<0, 1>, <a,b,c>, <a>, <b>, <(a, \\epsilon, b), (a, \\epsilon, a), (a, \\epsilon, c), (b, 0, c), (b, 1, a), (c, 1, b), (c, \\epsilon, a)>"
+Right (Just enfa) = parseAutomaton enfaTxt
+enfaTxt2 = "<0>, <p, q, r, q1, r1, s, r2>, <p>, <q, r>, <(p, \\epsilon, q), (p, \\epsilon, r), (q, 0, q1), (r, 0, r1), (r, \\epsilon, s), (q1, 0, q), (r1, 0, r2), (r2, 0, r)>"
+Right (Just enfa2) = parseAutomaton enfaTxt2
+nfaTxt2 = "<0>, <p, q, r, q1, r1, r2>, <p>, <p, q, r>, <(p, 0, q1), (p, 0, r1), (q1, 0, q), (q, 0, q1), (r1, 0, r2), (r2, 0, r), (r, 0, r1)>"
+Right (Just nfa2) = parseAutomaton nfaTxt2
