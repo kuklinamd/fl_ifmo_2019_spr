@@ -1,6 +1,7 @@
 module Expression where
 
 import Text.Printf
+import Combinators
 
 data Operator = Pow
               | Mul
@@ -21,8 +22,16 @@ data EAst a = BinOp Operator (EAst a) (EAst a)
             | Primary a
 
 -- Change the signature if necessary
+-- Constructs AST for the input expression
 parseExpression :: String -> Either String (EAst Integer)
-parseExpression input = undefined
+parseExpression input = 
+  runParserUntilEof (expression undefined undefined) input
+
+-- Change the signature if necessary
+-- Calculates the value of the input expression
+executeExpression :: String -> Either String Integer
+executeExpression input = 
+  runParserUntilEof (expression undefined undefined) input
 
 instance Show Operator where
   show Pow   = "^"
