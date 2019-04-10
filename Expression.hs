@@ -72,8 +72,8 @@ executeExpression input = eval <$> parseExpression input
     applyOp Lt i1 i2   = toInteger $ fromEnum $ i1 < i2
     applyOp Ge i1 i2   = toInteger $ fromEnum $ i1 >= i2
     applyOp Gt i1 i2   = toInteger $ fromEnum $ i1 > i2
-    applyOp Conj i1 i2 = toInteger $ fromEnum $ (1 == i1) && (1 == i2)
-    applyOp Disj i1 i2 = toInteger $ fromEnum $ (1 == i1) || (1 == i2)
+    applyOp Conj i1 i2 = toInteger $ fromEnum $ (0 /= i1) && (0 /= i2)
+    applyOp Disj i1 i2 = toInteger $ fromEnum $ (0 /= i1) || (0 /= i2)
 
 instance Show Operator where
   show Pow   = "^"
