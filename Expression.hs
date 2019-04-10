@@ -18,11 +18,10 @@ data Operator = Pow
               | Gt
               | Conj
               | Disj
-  deriving Show
+
 -- Simplest abstract syntax tree for expressions: only binops are allowed
 data EAst a = BinOp Operator (EAst a) (EAst a)
             | Primary a
-  deriving Show
 
 cmpComb = string "=="
       <|> string "/="
@@ -50,8 +49,9 @@ primary = Primary <$> number
 -- Change the signature if necessary
 -- Constructs AST for the input expression
 parseExpression :: String -> Either ParseError (EAst Integer)
-parseExpression input = 
-  runParserUntilEof (expression operations primary) input
+parseExpression input =
+  let prs = expression operations (primary <|> char '(' *> prs <* char ')')
+  in runParserUntilEof prs input
 
 -- Change the signature if necessary
 -- Calculates the value of the input expression
