@@ -8,8 +8,7 @@ import Data.List (null)
 -- Parsing result is either an error message or some payload and a suffix of the input which is yet to be parsed
 --newtype Parser str ok err = Parser { runParser :: str -> Either err (str, ok) }
 
-runParserUntilEof p inp =
-  either (Left . id) snd (runParser (p <* eof) inp)
+runParserUntilEof p inp = snd <$> (runParser (p <* eof) inp)
 
 data Assoc = LAssoc -- left associativity
            | RAssoc -- right associativity
