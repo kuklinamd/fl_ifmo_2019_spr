@@ -51,6 +51,7 @@ findTr dlt eCl f t
              in snd <$> fst <$> Map.toList dlt'
 findTr _ _ _ _ = Nothing
 
+eclose :: (Ord q, Ord s) => Delta q s -> Set q -> q -> Set q
 eclose dlt sts st
   | not (st `Set.member` sts)
   , Just s <- Map.lookup (st, Nothing) dlt = let sts' = Set.insert st sts in Set.unions $ Set.map (eclose dlt sts') s
