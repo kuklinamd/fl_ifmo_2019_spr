@@ -54,7 +54,7 @@ findTr _ _ _ _ = Nothing
 eclose :: (Ord q, Ord s) => Delta q s -> Set q -> q -> Set q
 eclose dlt sts st
   | not (st `Set.member` sts)
-  , Just s <- Map.lookup (st, Nothing) dlt = let sts' = Set.insert st sts in Set.unions $ Set.map (eclose dlt sts') s
+  , Just s <- Map.lookup (st, Nothing) dlt = let sts' = Set.insert st sts in Set.unions $ (eclose dlt sts') <$> Set.toList s
 eclose dlt sts st = Set.insert st sts
 
 -- Find all transitions from `st` state with each symbol.
