@@ -3,6 +3,9 @@ module Main where
 import System.Environment
 import AutomatonType
 import Automaton
+import Determiner
+import Completer
+import Minimizer
 import Text.Printf
 
 automatonInfo :: (Ord a, Ord b) => Maybe (Automaton a b) -> String
