@@ -11,7 +11,7 @@ import Debug.Trace
 
 ecloses dlt sts = map ((,) <*> (eclose dlt Set.empty)) $ Set.toList sts
 
---epsEliminator :: (Ord q, Ord s) => Automaton s q -> Automaton s q
+epsEliminator :: (Ord q, Ord s) => Automaton s q -> Automaton s q
 --epsEliminator a | Just () <- sequence_ (snd <$> Map.keys (delta a)) = a
 epsEliminator (Automaton sigs sts init term dlt) = Automaton sigs newSts init newTerm newDelta
   where
