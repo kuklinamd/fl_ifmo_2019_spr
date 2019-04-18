@@ -1,5 +1,7 @@
 module Expression (parseExpression) where
 
+import Debug.Trace
+
 import Text.Printf
 import Combinators
 import Control.Applicative (many, (<|>))
@@ -38,39 +40,24 @@ andP =(binOp <$> cmpP <*> andOp <*> andP) <|> cmpP
 
 cmpP = (binOp <$> plusMinP <*> cmpOp <*> plusMinP) <|> plusMinP
 
+
 plusMinP :: Parser String (EAst Integer)
-plusMinP = ((\ei f -> f ei) <$> mulDivP <*> plusMinP') <|> mulDivP
-  where
-    plusMinP' :: Parser String (EAst Integer -> EAst Integer)
-    plusMinP' =
-        (do
-        op <- plusMinOp
-        ex <- mulDivP
-        f  <- plusMinP'
-        pure (BinOp op (f ex))
-        )
-        <|>
-        (do
-        op <- plusMinOp
-        ex <- mulDivP
-        pure (BinOp op ex))
+plusMinP = do
+    op <- mulDivP
+    asts <- many $ do
+        op' <- plusMinOp
+        a   <- mulDivP
+        pure (\b -> BinOp op' b a)
+    pure (foldl (\e f -> f e) op asts)
 
 mulDivP :: Parser String (EAst Integer)
-mulDivP = ((\ei f -> f ei) <$> powP <*> mulDivP') <|> powP
-  where
-    mulDivP' :: Parser String (EAst Integer -> EAst Integer)
-    mulDivP' =
-        (do
-        op <- mulDivOp
-        ex <- powP
-        f  <- mulDivP'
-        pure (BinOp op (f ex))
-        )
-        <|>
-        (do
-        op <- mulDivOp
-        ex <- powP
-        pure (BinOp op ex))
+mulDivP = do
+    op <- powP
+    asts <- many $ do
+        op' <- mulDivOp
+        a   <- powP
+        pure (\b -> BinOp op' b a)
+    pure (foldl (\e f -> f e) op asts)
 
 powP :: Parser String (EAst Integer)
 powP = (binOp <$> atomP <*> powOp <*> powP) <|> atomP
