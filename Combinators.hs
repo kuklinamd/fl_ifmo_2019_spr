@@ -1,7 +1,7 @@
 module Combinators where
     
 import ParserCombinators
-import Control.Applicative ((<|>), Alternative, empty)
+import Control.Applicative ((<|>), Alternative, empty, many)
 import Data.List (null)
 
 -- Parsing result is either an error message or some payload and a suffix of the input which is yet to be parsed
@@ -44,16 +44,10 @@ nassoc op nextOpP = flip id <$> nextOpP <*> op <*> nextOpP <|> nextOpP
 lassoc :: Parser str (a -> a -> a) -> Parser str a -> Parser str a
 lassoc opP nextOpP = mainLassoc
   where
-    mainLassoc = flip id <$> nextOpP <*> subOp <|> nextOpP
-
-    subOp =
-      (do
-        op <- opP
-        ex <- nextOpP
-        f  <- subOp
-        pure (flip id (f ex) op))
-      <|>
-      (do
-      op <- opP
-      ex <- nextOpP
-      pure (flip id ex op))
+    mainLassoc = do
+        op <- nextOpP
+        asts <- many $ do
+            op' <- opP
+            a   <- nextOpP
+            pure (\b -> op' b a)
+        pure (foldl (\e f -> f e) op asts)
