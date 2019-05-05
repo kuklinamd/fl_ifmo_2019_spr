@@ -1,13 +1,15 @@
 module Expression where
 
 import Text.Printf
+import ParserCombinators
 import Combinators
+import Control.Applicative ((<|>))
 
 data Operator = Pow
               | Mul
               | Div
               | Sum
-              | Minus
+              | Sub -- substruction
               | Eq
               | Neq
               | Le
@@ -16,29 +18,83 @@ data Operator = Pow
               | Gt
               | Conj
               | Disj
+              | Neg  -- negation
+              | Minus -- unary minus
+
 
 -- Simplest abstract syntax tree for expressions: only binops are allowed
 data EAst a = BinOp Operator (EAst a) (EAst a)
+            | UnOp Operator (EAst a)
             | Primary a
+            | Var a
+
+cmpComb = string "=="
+      <|> string "/="
+      <|> string "<="
+      <|> string "<"
+      <|> string ">="
+      <|> string ">"
+
+
+operations = [(RAssoc, [(string "||", BinOp Disj)])
+             ,(RAssoc, [(string "&&", BinOp Conj)])
+             ,(NAssoc, [(string "==", BinOp Eq)
+                       ,(string "/=", BinOp Neq)
+                       ,(string "<=", BinOp Le)
+                       ,(string "<",  BinOp Lt)
+                       ,(string ">=", BinOp Ge)
+                       ,(string ">",  BinOp Gt)])
+             ,(LAssoc, [(string "+", BinOp Sum)
+                       ,(string ".-", BinOp Sub)])
+             ,(LAssoc, [(string "*", BinOp Mul)
+                       ,(string "/", BinOp Div)])
+             ,(RAssoc, [(string "^", BinOp Pow)])
+             ]
+
+
+primary = Primary <$> stringNumber
+var = Var <$> ident
+
 
 -- Change the signature if necessary
 -- Constructs AST for the input expression
-parseExpression :: String -> Either String (EAst Integer)
-parseExpression input = 
-  runParserUntilEof (expression undefined undefined) input
+parseExpression :: String -> Either ParseError (EAst String)
+parseExpression input =
+  let unary prs = (UnOp Neg <$> (char '!' *> prs)) <|> (UnOp Minus <$> (char '-' *> prs))
+      prs = expression operations (unary prs <|> var <|> primary <|> char '(' *> prs <* char ')')
+  in runParserUntilEof prs input
 
 -- Change the signature if necessary
 -- Calculates the value of the input expression
+{-
 executeExpression :: String -> Either String Integer
-executeExpression input = 
-  runParserUntilEof (expression undefined undefined) input
+executeExpression input = eval <$> parseExpression input
+  where
+    eval (Var a) =
+    eval (Primary a) = a
+    eval (BinOp op e1 e2) = applyOp op (eval e1) (eval e2)
+
+    applyOp Pow i1 i2 = i1 ^ i2
+    applyOp Mul i1 i2 = i1 * i2
+    applyOp Div i1 i2 = i1 `div` i2
+    applyOp Sum i1 i2 = i1 + i2
+    applyOp Sub i1 i2 = i1 - i2
+    applyOp Eq i1 i2   = toInteger $ fromEnum $ i1  == i2
+    applyOp Neq i1 i2  = toInteger $ fromEnum $ i1 /= i2
+    applyOp Le i1 i2   = toInteger $ fromEnum $ i1 <= i2
+    applyOp Lt i1 i2   = toInteger $ fromEnum $ i1 < i2
+    applyOp Ge i1 i2   = toInteger $ fromEnum $ i1 >= i2
+    applyOp Gt i1 i2   = toInteger $ fromEnum $ i1 > i2
+    applyOp Conj i1 i2 = toInteger $ fromEnum $ (0 /= i1) && (0 /= i2)
+    applyOp Disj i1 i2 = toInteger $ fromEnum $ (0 /= i1) || (0 /= i2)
+-}
 
 instance Show Operator where
   show Pow   = "^"
   show Mul   = "*"
   show Div   = "/"
   show Sum   = "+"
-  show Minus = "-"
+  show Sub   = "-"
   show Eq    = "=="
   show Neq   = "/="
   show Le    = "<="
@@ -47,6 +103,8 @@ instance Show Operator where
   show Gt    = ">"
   show Conj  = "&&"
   show Disj  = "||"
+  show Minus = "-"
+  show Neg   = "!"
 
 instance Show a => Show (EAst a) where
   show = show' 0
@@ -55,8 +113,10 @@ instance Show a => Show (EAst a) where
         (if n > 0 then printf "%s|_%s" (concat (replicate (n - 1) "| ")) else id)
         (case t of
                   BinOp op l r -> printf "%s\n%s\n%s" (show op) (show' (ident n) l) (show' (ident n) r)
-                  Primary x -> show x)
-      ident = (+1)
+                  UnOp op x -> printf "%s%s" (show op) (show x)
+                  Primary x -> show x
+                  Var x -> show x)
+      ident = succ
 
 {-
 show (BinOp Conj (BinOp Pow (Primary 1) (BinOp Sum (Primary 2) (Primary 3))) (Primary 4))
@@ -68,4 +128,23 @@ show (BinOp Conj (BinOp Pow (Primary 1) (BinOp Sum (Primary 2) (Primary 3))) (Pr
 | | |_2
 | | |_3
 |_4
+-}
+
+{-
+test =
+    let Right a1 = executeExpression "1+2+3"
+        test1 = a1 == 6
+        Right a2 = executeExpression "1+2*3"
+        test2 = a2 == 7
+        Right a3 = executeExpression "1*2+3"
+        test3 = a3 == 5
+        Right a4 = executeExpression "1^2^3"
+        test4 = a4 == 1
+        Right a5 = executeExpression "1&&0||1&&1"
+        test5 = a5 == 1
+        Right a6 = executeExpression "1||0&&0||1"
+        test6 = a6 == 1
+        Right a7 = executeExpression "10>4||10>=10"
+        test7 = a7 == 1
+    in and [test1, test2, test3, test4, test5, test6,test7]
 -}
