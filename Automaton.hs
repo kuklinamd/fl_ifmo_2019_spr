@@ -117,21 +117,31 @@ testDFA = isDFA $ fromJust (right $ parseAutomaton testD)
 testNFA = isNFA $ fromJust (right $ parseAutomaton testND)
 testComplete = isComplete $ fromJust (right $ parseAutomaton testC)
 
-autTxt = "<0,1>, <a,b,c,d,e,f,g>, <a>, <f,g>, <(a, 0, c), (a, 1, b), (b, 1, a), (b, 0, c), (c, 0, d), (c, 1, d), (d, 0, e), (d,1,f), (e,1,g), (e,0,f), (g,0,g), (g,1,f), (f, 0, f), (f, 1, f)>"
-Right (Just aut) = parseAutomaton autTxt
-autMinTxt = "<0, 1>, <ab, c, d, e, fg>, <ab>, <fg>, <(ab, 1, ab), (ab,0,c), (c,0,d), (c,1,d), (d,1,fg),(d,0,e),(e,0,fg),(e,1,fg), (fg,0,fg),(fg,1,fg)>"
-Right (Just autMin) = parseAutomaton autMinTxt
 
+autTxt = "<0,1>, <a,b,c,d,e,f,g>, <a>, <f,g>, <(a, 0, c), (a, 1, b), (b, 1, a), (b, 0, c), (c, 0, d), (c, 1, d), (d, 0, e), (d,1,f), (e,1,g), (e,0,f), (g,0,g), (g,1,f), (f, 0, f), (f, 1, f)>"
+Right (Just t1) = parseAutomaton autTxt
+autMinTxt = "<0, 1>, <ab, c, d, e, fg>, <ab>, <fg>, <(ab, 1, ab), (ab,0,c), (c,0,d), (c,1,d), (d,1,fg),(d,0,e),(e,0,fg),(e,1,fg), (fg,0,fg),(fg,1,fg)>"
+Right (Just t2) = parseAutomaton autMinTxt
 reachTxt = "<0,1>, <a,b,c,d,e,f,g,h>, <a>, <f,g>, <(a,0,h),(a,1,b),(b,1,a),(b,0,h),(h,0,c),(h,1,c),(c,0,e),(c,1,f),(e,0,f),(e,1,g),(d,0,e),(d,1,f),(g,0,g),(g,1,f),(f,1,f),(f,0,f)>"
-Right (Just reachA) = parseAutomaton reachTxt
-Right (Just a) = parseAutomaton "<1>, <a,b>, <a>, <b>, <(a,1,b), (b,1,a)>"
-Right (Just b) = parseAutomaton "<1, 0>, <a, b>, <a>, <b>, <(a,1,b)>"
-Right (Just c) = parseAutomaton "<aa>, <stone, sttwo>, <stone>, <sttwo>, <(stone, aa, sttwo)>"
-Right (Just nfa) = parseAutomaton testND
-Right (Just dfa) = parseAutomaton testD
+Right (Just t3) = parseAutomaton reachTxt
+Right (Just t4) = parseAutomaton "<1>, <a,b>, <a>, <b>, <(a,1,b), (b,1,a)>"
+Right (Just t5) = parseAutomaton "<1, 0>, <a, b>, <a>, <b>, <(a,1,b)>"
+Right (Just t6) = parseAutomaton "<aa>, <stone, sttwo>, <stone>, <sttwo>, <(stone, aa, sttwo)>"
+Right (Just t7) = parseAutomaton testND
+Right (Just t8) = parseAutomaton testD
 enfaTxt = "<0, 1>, <a,b,c>, <a>, <b>, <(a, \\epsilon, b), (a, \\epsilon, a), (a, \\epsilon, c), (b, 0, c), (b, 1, a), (c, 1, b), (c, \\epsilon, a)>"
-Right (Just enfa) = parseAutomaton enfaTxt
+Right (Just t9) = parseAutomaton enfaTxt
 enfaTxt2 = "<0>, <p, q, r, q1, r1, s, r2>, <p>, <q, r>, <(p, \\epsilon, q), (p, \\epsilon, r), (q, 0, q1), (r, 0, r1), (r, \\epsilon, s), (q1, 0, q), (r1, 0, r2), (r2, 0, r)>"
-Right (Just enfa2) = parseAutomaton enfaTxt2
+Right (Just t10) = parseAutomaton enfaTxt2
 nfaTxt2 = "<0>, <p, q, r, q1, r1, r2>, <p>, <p, q, r>, <(p, 0, q1), (p, 0, r1), (q1, 0, q), (q, 0, q1), (r1, 0, r2), (r2, 0, r), (r, 0, r1)>"
-Right (Just nfa2) = parseAutomaton nfaTxt2
+Right (Just t11) = parseAutomaton nfaTxt2
+txt = "<a,b>, <0,1,2,3,4,5>, <0>, <1,3,4,5>, <(0, a, 1), (1, a, 2), (2, a, 3), (3, a, 4), (4, a, 5), (5, a, 0), (0, a, 2), (1, a, 3), (2, a, 4), (3, a, 5), (4, a, 0), (5, a, 1), (0, b, 5), (5, b, 4), (4, b, 3), (3, b, 2), (2, b, 1), (1, b, 0) >"
+Right (Just t12) = parseAutomaton txt
+txt2 = "<a>, <b>, <b>, <b>, <(b, a, b), (b, \\epsilon, b)>"
+Right (Just t13) = parseAutomaton txt2
+
+tests = [t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13]
+--runTests :: [Automaton q s] -> Bool
+runTests = all doTest tests
+  where
+      doTest a = (isMinimal $ minimize a) && (isComplete $ complete a) && (isDFA $ determine a)
