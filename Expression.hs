@@ -1,5 +1,6 @@
 module Expression where
 
+import Debug.Trace
 import Text.Printf
 import ParserCombinators
 import Combinators
@@ -20,13 +21,14 @@ data Operator = Pow
               | Disj
               | Neg  -- negation
               | Minus -- unary minus
-
+      deriving Eq
 
 -- Simplest abstract syntax tree for expressions: only binops are allowed
 data EAst a = BinOp Operator (EAst a) (EAst a)
             | UnOp Operator (EAst a)
             | Primary a
-            | Var a
+            | Var String
+      deriving Eq
 
 cmpComb = string "=="
       <|> string "/="
@@ -52,16 +54,21 @@ operations = [(RAssoc, [(string "||", BinOp Disj)])
              ]
 
 
-primary = Primary <$> stringNumber
+primary = Primary <$> number
 var = Var <$> ident
 
 
 -- Change the signature if necessary
 -- Constructs AST for the input expression
-parseExpression :: String -> Either ParseError (EAst String)
+parseExpression :: String -> Either ParseError (EAst Integer)
 parseExpression input =
   let unary prs = (UnOp Neg <$> (char '!' *> prs)) <|> (UnOp Minus <$> (char '-' *> prs))
-      prs = expression operations (unary prs <|> var <|> primary <|> char '(' *> prs <* char ')')
+      prs = expression operations (
+              var
+              <|> primary
+              <|> char '(' *> prs <* char ')'
+              <|> unary prs
+           )
   in runParserUntilEof prs input
 
 -- Change the signature if necessary
@@ -89,6 +96,7 @@ executeExpression input = eval <$> parseExpression input
     applyOp Disj i1 i2 = toInteger $ fromEnum $ (0 /= i1) || (0 /= i2)
 -}
 
+
 instance Show Operator where
   show Pow   = "^"
   show Mul   = "*"
@@ -113,9 +121,9 @@ instance Show a => Show (EAst a) where
         (if n > 0 then printf "%s|_%s" (concat (replicate (n - 1) "| ")) else id)
         (case t of
                   BinOp op l r -> printf "%s\n%s\n%s" (show op) (show' (ident n) l) (show' (ident n) r)
-                  UnOp op x -> printf "%s%s" (show op) (show x)
+                  UnOp op x -> printf "%s\n%s" (show op) (show' (ident n) x)
                   Primary x -> show x
-                  Var x -> show x)
+                  Var x -> x)
       ident = succ
 
 {-
