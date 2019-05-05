@@ -1,6 +1,7 @@
 module Completer (complete, isComplete) where
 
 import AutomatonType
+import Determiner
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -22,8 +23,9 @@ isComplete a@(Automaton sig sts _ _ delta) | not (isNFAUsefull a) = all check ((
         check ((_, Just _), sts) = Set.size sts > 1
 isComplete _ = False
 
-complete :: (Ord s, Ord q, Show q, Show s) => Automaton s q -> Automaton s q
+complete :: (Ord s, Ord q) => Automaton s [q] -> Automaton s [q]
 complete a | isComplete a = a
+complete a | not (isDFA a) = complete (determine a)
 complete (Automaton sig sts init term delt) = Automaton sig sts' init term' delt'
   where
     sts'  = Set.insert Bot sts
