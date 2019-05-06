@@ -19,13 +19,15 @@ data Operator = Pow
               | Gt
               | Conj
               | Disj
-              | Neg  -- negation
-              | Minus -- unary minus
+      deriving Eq
+
+data UnOperator = Neg  -- negation
+                | Minus -- unary minus
       deriving Eq
 
 -- Simplest abstract syntax tree for expressions: only binops are allowed
 data EAst a = BinOp Operator (EAst a) (EAst a)
-            | UnOp Operator (EAst a)
+            | UnOp UnOperator (EAst a)
             | Primary a
             | Var String
       deriving Eq
@@ -102,7 +104,7 @@ instance Show Operator where
   show Mul   = "*"
   show Div   = "/"
   show Sum   = "+"
-  show Sub   = "-"
+  show Sub   = ".-"
   show Eq    = "=="
   show Neq   = "/="
   show Le    = "<="
@@ -111,6 +113,8 @@ instance Show Operator where
   show Gt    = ">"
   show Conj  = "&&"
   show Disj  = "||"
+
+instance Show UnOperator where
   show Minus = "-"
   show Neg   = "!"
 

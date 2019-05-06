@@ -131,4 +131,6 @@ betweenSpaces = between spaces
 between b p = b *> p <* b
 
 eof :: Parser String ()
-eof = Parser $ \s -> if null (content s) then Right (s, ()) else Left "Parse: input isn't eof."
+eof = Parser $ \s -> if null (content s)
+                     then Right (s, ())
+                     else Left $ "eof: " ++ show (pos s) ++ " symbol '" ++ printU (uncons $ content s) ++ "' isn't EOF symbol"
