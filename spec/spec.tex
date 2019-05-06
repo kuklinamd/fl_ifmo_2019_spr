@@ -1,0 +1,82 @@
+\documentclass[12pt, a4paper] {ncc}
+\usepackage[utf8] {inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[english, russian] {babel}
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm,bindingoffset=0cm]{geometry}
+\usepackage{xcolor}
+%\usepackage{bussproofs}
+\usepackage{listings}
+
+\begin{document}
+\setcounter{figure}{0}
+
+\section{Конкретный синтаксис.}
+\begin{verbatim}
+digit_nonzero = 1 | .. | 9
+digit = 0 | digit_nonzero
+alpha = a | ... | z | A | ... Z
+
+nondigit = _ | alpha
+
+alphanum = digit | alpha
+
+prime = digit_nonzero | digit_nonzero digit | digit_nonzero digit prime
+
+ident := nondigit | nondigit alphanum | nondigit alphanum ident
+bop = + | .- | ^ | * | / | == | /= | <= | < | > | >= | || | && 
+
+unop = ! | -
+
+aexpr := aexpr bop aexpr
+      | uop aexpr 
+      | var 
+      | prime
+      | (aexpr)
+
+
+arg := ident
+
+marg := arg
+      | (arg)
+
+args := marg args
+      | arg
+
+expr' := aexpr
+       | let 
+
+expr := expr' | (expr')
+
+bind := ident args = expr
+
+let := 'let' bind 'in' expr | (let)
+
+terminate := ';'
+
+program := main = expr
+
+\end{verbatim}
+
+Точка входа: функция main без аргументов.
+
+\section{Абстрактный синтаксис}
+
+Представлен в виде АСД.
+
+\begin{lstlisting}[language=Haskell]
+data Ast = Bind
+
+data Bind = Bind Name Args Expr
+
+data Args = [Var String]
+
+data Expr = AExpr | Let Bind Expr 
+
+data AExpr = BinOp BinOperator Expr Expr
+           | UnOP  UnOperator Expr
+           | Primary Int
+           | Var String
+\end{lstlisting}
+
+
+\end{document}
