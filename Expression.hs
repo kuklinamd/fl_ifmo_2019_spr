@@ -3,8 +3,7 @@ module Expression where
 import Debug.Trace
 import Text.Printf
 import ParserCombinators
-import Combinators
-import Control.Applicative ((<|>))
+import Control.Applicative ((<|>), many)
 
 data Operator = Pow
               | Mul
@@ -32,72 +31,67 @@ data EAst a = BinOp Operator (EAst a) (EAst a)
             | Var String
       deriving Eq
 
-cmpComb = string "=="
-      <|> string "/="
-      <|> string "<="
-      <|> string "<"
-      <|> string ">="
-      <|> string ">"
-
-
-operations = [(RAssoc, [(string "||", BinOp Disj)])
-             ,(RAssoc, [(string "&&", BinOp Conj)])
-             ,(NAssoc, [(string "==", BinOp Eq)
-                       ,(string "/=", BinOp Neq)
-                       ,(string "<=", BinOp Le)
-                       ,(string "<",  BinOp Lt)
-                       ,(string ">=", BinOp Ge)
-                       ,(string ">",  BinOp Gt)])
-             ,(LAssoc, [(string "+", BinOp Sum)
-                       ,(string ".-", BinOp Sub)])
-             ,(LAssoc, [(string "*", BinOp Mul)
-                       ,(string "/", BinOp Div)])
-             ,(RAssoc, [(string "^", BinOp Pow)])
-             ]
-
-
 primary = Primary <$> number
 var = Var <$> ident
-
 
 -- Change the signature if necessary
 -- Constructs AST for the input expression
 parseExpression :: String -> Either ParseError (EAst Integer)
-parseExpression input =
-  let unary prs = (UnOp Neg <$> (char '!' *> prs)) <|> (UnOp Minus <$> (char '-' *> prs))
-      prs = expression operations (
-              var
-              <|> primary
-              <|> char '(' *> prs <* char ')'
-              <|> unary prs
-           )
-  in runParserUntilEof prs input
+parseExpression input = snd <$> runParser parseBinOp input
 
--- Change the signature if necessary
--- Calculates the value of the input expression
-{-
-executeExpression :: String -> Either String Integer
-executeExpression input = eval <$> parseExpression input
+parseAtom = var <|> primary <|> char '(' *> parseBinOp <* char ')'
+
+parseBinOp = parseOr
+
+binOp = flip BinOp
+
+parseOr = (binOp <$> parseAnd <*> orOp <*> parseOr) <|> parseAnd
   where
-    eval (Var a) =
-    eval (Primary a) = a
-    eval (BinOp op e1 e2) = applyOp op (eval e1) (eval e2)
+    orOp = (const Disj  <$> betweenSpaces (string "||"))
 
-    applyOp Pow i1 i2 = i1 ^ i2
-    applyOp Mul i1 i2 = i1 * i2
-    applyOp Div i1 i2 = i1 `div` i2
-    applyOp Sum i1 i2 = i1 + i2
-    applyOp Sub i1 i2 = i1 - i2
-    applyOp Eq i1 i2   = toInteger $ fromEnum $ i1  == i2
-    applyOp Neq i1 i2  = toInteger $ fromEnum $ i1 /= i2
-    applyOp Le i1 i2   = toInteger $ fromEnum $ i1 <= i2
-    applyOp Lt i1 i2   = toInteger $ fromEnum $ i1 < i2
-    applyOp Ge i1 i2   = toInteger $ fromEnum $ i1 >= i2
-    applyOp Gt i1 i2   = toInteger $ fromEnum $ i1 > i2
-    applyOp Conj i1 i2 = toInteger $ fromEnum $ (0 /= i1) && (0 /= i2)
-    applyOp Disj i1 i2 = toInteger $ fromEnum $ (0 /= i1) || (0 /= i2)
--}
+parseAnd = (binOp <$> parseCmp <*> andOp <*> parseAnd) <|> parseCmp
+  where
+    andOp = (const Conj <$> betweenSpaces (string "&&"))
 
+parseCmp = (binOp <$> parsePM <*> cmpOp <*> parsePM) <|> parsePM
+  where
+    cmpOp = ((const Eq <$> betweenSpaces (string "=="))
+               <|> (const Neq <$> betweenSpaces (string "/="))
+               <|> (const Le <$> betweenSpaces (string "<="))
+               <|> (const Lt <$> betweenSpaces (string "<"))
+               <|> (const Ge <$> betweenSpaces (string ">="))
+               <|> (const Gt <$> betweenSpaces (string ">")))
+
+parsePM = do
+    op <- parseMD
+    asts <- many $ do
+        op' <- pmOp
+        a   <- parseMD
+        pure (\b -> BinOp op' b a)
+    pure (foldl (\e f -> f e) op asts)
+  where
+    pmOp = ((const Sum <$> betweenSpaces (string "+"))
+              <|>  (const Sub <$> betweenSpaces (string ".-")))
+
+parseMD = do
+    op <- parsePow
+    asts <- many $ do
+        op' <- mdOp
+        a   <- parsePow
+        pure (\b -> BinOp op' b a)
+    pure (foldl (\e f -> f e) op asts)
+  where
+   mdOp = (const Mul <$> betweenSpaces (string "*")
+             <|>  const Div <$> betweenSpaces (string "/"))
+
+parsePow = (binOp <$> parseUnOp <*> powOp <*> parsePow) <|> parseUnOp
+  where
+    powOp = (const Pow <$> betweenSpaces (string "^"))
+
+-- Parse un ops
+parseUnOp = (UnOp <$> unOp <*> (primary <|> var <|> (char '(' *> parseAtom <* char ')'))) <|> parseAtom
+  where
+    unOp = (const Minus <$> betweenSpaces (string "-")) <|> (const Neg <$> betweenSpaces (string "!"))
 
 instance Show Operator where
   show Pow   = "^"
@@ -130,33 +124,3 @@ instance Show a => Show (EAst a) where
                   Var x -> x)
       ident = succ
 
-{-
-show (BinOp Conj (BinOp Pow (Primary 1) (BinOp Sum (Primary 2) (Primary 3))) (Primary 4))
-
-&&
-|_^
-| |_1
-| |_+
-| | |_2
-| | |_3
-|_4
--}
-
-{-
-test =
-    let Right a1 = executeExpression "1+2+3"
-        test1 = a1 == 6
-        Right a2 = executeExpression "1+2*3"
-        test2 = a2 == 7
-        Right a3 = executeExpression "1*2+3"
-        test3 = a3 == 5
-        Right a4 = executeExpression "1^2^3"
-        test4 = a4 == 1
-        Right a5 = executeExpression "1&&0||1&&1"
-        test5 = a5 == 1
-        Right a6 = executeExpression "1||0&&0||1"
-        test6 = a6 == 1
-        Right a7 = executeExpression "10>4||10>=10"
-        test7 = a7 == 1
-    in and [test1, test2, test3, test4, test5, test6,test7]
--}
