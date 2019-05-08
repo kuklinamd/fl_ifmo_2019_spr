@@ -5,78 +5,97 @@
 \usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm,bindingoffset=0cm]{geometry}
 \usepackage{xcolor}
 %\usepackage{bussproofs}
+\usepackage{syntax}
 \usepackage{listings}
 
 \begin{document}
 \setcounter{figure}{0}
 
 \section{Конкретный синтаксис.}
-\begin{verbatim}
-digit_nonzero = 1 | .. | 9
-digit = 0 | digit_nonzero
-alpha = a | ... | z | A | ... Z
+\begin{grammar}
+<ident> ::= <nondigit> \alt <nondigit> <alphanum> \alt <nondigit> <alphanum> <ident>
 
-nondigit = _ | alpha
+<binop> ::= `+' | `.-' | `^' | `*' | `/' | `==' | `/= ' | `<=' | `<' | `>' | `>=' | `|' | `\&\&'
 
-alphanum = digit | alpha
+<unop> ::= '-' | '!'
 
-prime = digit_nonzero | digit_nonzero digit | digit_nonzero digit prime
+<num-lit> ::= number
 
-ident := nondigit | nondigit alphanum | nondigit alphanum ident
-bop = + | .- | ^ | * | / | == | /= | <= | < | > | >= | || | && 
+<bool-lit> ::= 'T' | 'F'
 
-unop = ! | -
+<lit> ::= <num-lit> | <bool-lit>
 
-aexpr := aexpr bop aexpr
-      | uop aexpr 
-      | var 
-      | prime
-      | (aexpr)
+<expr> ::= <ident>
+\alt <lit>
+\alt <app>
+\alt 'if' <expr> 'then' <expr> 'else' <expr>
+\alt 'let' var '=' <expr> 'in' <expr>
+\alt  <expr> <binop> <expr>
+\alt <unop> <expr>
+\alt '(' <expr> ')'
 
+<app> ::=  <ident> ' ' <ident>
+\alt <ident> ' ' <lit>
+\alt <ident> ' ' '(' <expr>')'
+\alt '(' <expr> ')' <ident>
+\alt '(' <expr> ')' <lit>
+\alt '(' <expr> ')' '(' <expr> ')'
 
-arg := ident
+<bind> ::= <ident> (<arg> | $\varepsilon$) '=' <expr>
 
-marg := arg
-      | (arg)
+<arg> ::= <ident> | <ident> ' ' <arg>
 
-args := marg args
-      | arg
+<decl> ::= <bind> ';' <decl> | <bind> ';'
 
-expr' := aexpr
-       | let 
+\end{grammar}
 
-expr := expr' | (expr')
+Примеры.
+\begin{enumerate}
+\item Объявление функции/переменной.
+\begin{lstlisting}[language=Haskell]
+f x = x;
+n = 10;
+\end{lstlisting}
+\item Использование условного оператора \texttt{if}
+\begin{lstlisting}[language=Haskell]
+f x = if x == 0 then 10 else 20 + x;
+\end{lstlisting}
 
-bind := ident args = expr
+\item Использование \texttt{let}-связывания.
+\begin{lstlisting}[language=Haskell]
+f y = let x = 10 * y in x ^ x;
+\end{lstlisting}
+\item Вызов функции
+\begin{lstlisting}[language=Haskell]
+f x = x;
+g = f 10;
 
-let := 'let' bind 'in' expr | (let)
-
-terminate := ';'
-
-program := main = expr
-
-\end{verbatim}
-
-Точка входа: функция main без аргументов.
+ff x y = x + y;
+gg = ff 10 20;
+\end{lstlisting}
+\end{enumerate}
 
 \section{Абстрактный синтаксис}
 
 Представлен в виде АСД.
 
 \begin{lstlisting}[language=Haskell]
-data Ast = Bind
+type Ast = [Decl]
 
-data Bind = Bind Name Args Expr
+data Decl = BindDecl Bind
 
-data Args = [Var String]
+data Bind = Bind Name [Name] Expr
 
-data Expr = AExpr | Let Bind Expr 
+data Expr = Var Name
+		  | Lit Lit
+          | App Expr Expr
+          | If Expr Expr Expr
+		  | Let Name Expr Expr
+          | UnOp UnOperator Expr
+		  | BinOp BinOperator Expr Expr
 
-data AExpr = BinOp BinOperator Expr Expr
-           | UnOP  UnOperator Expr
-           | Primary Int
-           | Var String
+data Lit = ILit Integer | BLit Bool
+
 \end{lstlisting}
-
 
 \end{document}
