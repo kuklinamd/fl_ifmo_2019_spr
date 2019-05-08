@@ -38,6 +38,9 @@ cut (BinOp Pow t (Primary 1)) = t
 -- Always zero or one
 cut (BinOp Mul t (Primary 0)) = Primary 0
 cut (BinOp Mul (Primary 0) t) = Primary 0
+cut (BinOp Div (Primary 0) t) = Primary 0
+cut (BinOp Div t (Primary 0)) = error "Division by zero!"
+cut (BinOp Div t (Primary 1)) = t
 cut (BinOp Pow t (Primary 0)) = Primary 1
 cut (BinOp Pow (Primary 0) t) = Primary 0
 cut (BinOp Pow (Primary 1) t) = Primary 1
