@@ -1,0 +1,179 @@
+\documentclass[12pt, a4paper] {ncc}
+\usepackage[utf8] {inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[english, russian] {babel}
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm,bindingoffset=0cm]{geometry}
+\usepackage{xcolor}
+%\usepackage{bussproofs}
+\usepackage{syntax}
+\usepackage{listings}
+\usepackage{proof}
+
+\begin{document}
+\setcounter{figure}{0}
+
+\section{Конкретный синтаксис.}
+\begin{grammar}
+<ident> ::= <nondigit> \alt <nondigit> <alphanum> \alt <nondigit> <alphanum> <ident>
+
+<binop> ::= `+' | `.-' | `^' | `*' | `/' | `==' | `/= ' | `<=' | `<' | `>' | `>=' | `|' | `\&\&'
+
+<unop> ::= '-' | '!'
+
+<num-lit> ::= number
+
+<bool-lit> ::= 'T' | 'F'
+
+<lit> ::= <num-lit> | <bool-lit>
+
+<constr-name> ::= <capital-alpha> | <capital-alpha> <ident>
+
+<pat> ::= <var>
+\alt <lit>
+\alt <constr-name>
+\alt <constr-name> <pats>
+\alt '(' <pat> ')'
+
+<pats> ::= <pat> | <pat> <pats>
+
+<expr> ::= <ident>
+\alt <lit>
+\alt <app>
+\alt 'if' <expr> 'then' <expr> 'else' <expr>
+\alt 'let' var '=' <expr> 'in' <expr>
+\alt 'case' '(' <expr> ')' 'of' '\{' <case-body> '\}'
+\alt  <expr> <binop> <expr>
+\alt <unop> <expr>
+\alt '(' <expr> ')'
+
+<app> ::=  <ident> ' ' <ident>
+\alt <ident> ' ' <lit>
+\alt <ident> ' ' '(' <expr>')'
+\alt '(' <expr> ')' <ident>
+\alt '(' <expr> ')' <lit>
+\alt '(' <expr> ')' '(' <expr> ')'
+
+<case-entry> ::= '|' <pat> '->' <expr> 
+
+<case-body> ::= <case-entry> | <case-entry> <case-body>
+
+<bind> ::= <ident> (<arg> | $\varepsilon$) '=' <expr>
+
+<arg> ::= <ident> | <ident> ' ' <arg>
+
+<data> ::= 'data' <constr-name> '=' <data-body>
+
+<data-body> ::= <data-entry> | <data-entry> '|' <data-body>
+
+<data-entry> ::= <constr-name> | <constr-name> <pats>
+
+<type-def> ::= ':' ident ':' <type>
+
+<type> ::= 'Int'
+\alt 'Bool'
+\alt <type> '->' <type>
+
+<decl> ::= <bind> | <data> | <type-def>
+
+<decls> ::= <decl> ';' | <decl> ';' <decls>
+
+\end{grammar}
+
+Введены две новые синтаксические категории: объявление типа функций (\texttt{type-def})
+и объявление типов данных (\texttt{data}).
+
+Каждой функции должно предшествовать объявление её типа.
+
+Примеры:
+\begin{enumerate}
+\item Объявление типы данных.
+\begin{lstlisting}[language=Haskell]
+data EitherBI = Left Bool | Right Int;
+\end{lstlisting}
+
+\item Объявление типа функции.
+\begin{lstlisting}[language=Haskell]
+:f: Int -> Int;
+\end{lstlisting}
+\end{enumerate}
+
+Добавлена синтаксическая конструкция \texttt{case}.
+\begin{lstlisting}[language=Haskell]
+:f: EitherBI -> Bool
+f x = case (x) of {
+    | Right b -> b
+    | Left i  -> T
+};
+\end{lstlisting}
+
+И паттерн-матчинг.
+\begin{lstlisting}[language=Haskell]
+:f: EitherBI -> Bool
+f (Right b) = b;
+f (Left i) = T;
+\end{lstlisting}
+
+Правила проверки типов тогда сводятся к проверке непротиворечивости
+объявления шаблона и его использовании.
+
+Правила типизации шаблонов.
+
+\infer{\text{PatLit x} : \text{Int}}{
+	x \in \text{Int}
+}
+
+\ \\
+\infer{\text{PatBool x} : \text{Bool}}{
+	x \in \text{Bool}
+}
+
+\ \\
+\infer{\Delta \vdash \text{PatVar x} : A}{}
+
+\ \\
+\infer{\Delta \text{PatConstr D } \{a_i\}_{i \in 1 \ldots n} : A}{
+	\Delta D : \{A_i\}_{i \in 1 \ldots n} \to A &
+	\Delta \vdash \{a_i\}_{i \in 1 \ldots n} : \{A_i\}_{i \in 1 \ldots n}
+}
+
+Тогда case будет типизироваться как \\
+
+\infer{\Gamma, \Delta \vdash \text{case } x \text{ of } \{p_i \to e_i\}_{i \in 1 \ldots n}  : B} {
+	\Gamma, \Delta \vdash x : A &
+	\Delta \vdash \{p_i\}_{i \in 1 \ldots n} : A &
+	\Gamma, \Delta \vdash \{e_i\}_{i \in 1 \ldots n} : B
+}
+
+\section{Абстрактный синтаксис}
+
+Представлен в виде АСД.
+
+\begin{lstlisting}[language=Haskell]
+type Ast = [Decl]
+
+data Decl = BindDecl Bind | DataDecl Data | TypeDecl Name Type
+
+data Data = Data Name [Constr]
+
+data Constr = Constr Name [Name]
+
+data Type = Arrow Type Type | TInt | TBool | TData Name
+
+data Bind = Bind Name [Pat] Expr
+
+data Pat = PatVar Name | PatCtr Name [Pat] | PatLit Lit
+
+data Expr = Var Name
+          | Lit Lit
+          | App Expr Expr
+          | If Expr Expr Expr
+          | Case Expr [(Pat, Expr)]
+          | Let Name Expr Expr
+          | UnOp UnOperator Expr
+          | BinOp BinOperator Expr Expr
+
+data Lit = ILit Integer | BLit Bool
+
+\end{lstlisting}
+
+\end{document}
