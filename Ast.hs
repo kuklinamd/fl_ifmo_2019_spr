@@ -167,14 +167,3 @@ instance Pretty BinOperator where
     pretty (AO o) = pretty o
     pretty (CO o) = pretty o
     pretty (LO o) = pretty o
-
-printTree = show' 0
-  where
-    show' n t =
-      (if n > 0 then printf "%s|_%s" (concat (replicate (n - 1) "| ")) else id)
-      (case t of
-                BinOp op l r -> printf "%s\n%s\n%s" (pretty op) (show' (ident n) l) (show' (ident n) r)
-                UnOp op x -> printf "%s\n%s" (pretty op) (show' (ident n) x)
-                Lit x -> pretty x
-                Var x -> x)
-    ident = succ
