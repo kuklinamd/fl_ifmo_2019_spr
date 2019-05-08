@@ -1,8 +1,11 @@
 module Main where
 
 import System.Environment
-import Expression
 import Text.Printf
+import Ast
+import Parser
+import TypeChecker
+import ParserCombinators
 
 main :: IO ()
 main = do
@@ -10,11 +13,16 @@ main = do
   mapM_
     (\fileName -> do
         input <- readFile fileName
-        let a = parseExpression input
-        let r = executeExpression input
-        putStrLn $ printf "Parsing %s\n" fileName
-        putStrLn $ either id show a
-        putStrLn $ either id show r
-        putStrLn ""
+        case programParser input of
+            Left err -> putStrLn $ "error: " ++ err
+            Right (_, ast) -> do
+              putStrLn "\n>>> Pretty print of parsed AST:\n"
+              putStrLn $ pretty ast
+              putStrLn "\n>>> Type checker result (context):\n"
+              case typeCheckerCtx ast of
+                Left err -> putStrLn $ "error: " ++ err
+                Right ctx -> do
+                    putStrLn "Everything typechecked."
+                    putStrLn $ pretty ctx
     )
     fileNames

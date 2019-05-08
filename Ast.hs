@@ -2,6 +2,8 @@
 
 module Ast where
 
+
+import Text.Printf
 {-
 Языковые конструкции:
 * Выражения (арифметические, логические)
@@ -13,12 +15,10 @@ module Ast where
 * Сопоставление с шаблонами в аргументе функции
 * Case-конструкция.
 * Спецификация типов данных (data).
-  deriving Show
 
 Пример программы:
 
 data EitherSI = Left Bool | Right Int | Middle
-  deriving Show
 
 f (Left b) = if b then -1 else 1
 f (Right n) = n + 2
@@ -26,7 +26,7 @@ f Middle = 42
 
 g x = if x == 0 then Left False else if x > 10 then Right 50 else Middle
 
-main = case f (g 10) of { (Right n) -> n; (Left b) -> 0; Middle -> -1; }
+main = case g (f Middle) of { (Right n) -> n; (Left b) -> 0; Middle -> -1; }
 
 -}
 
@@ -34,8 +34,11 @@ type Name = String
 
 type Ast = [Decl]
 
-data Decl = DataDecl Data | BindDecl Bind
+data Decl = DataDecl Data | BindDecl Bind | TypeDecl Name Type
   deriving Show
+
+data Type = Arrow Type Type | TInt | TBool | TData String
+  deriving (Show, Eq)
 
 data Data = Data Name [Constr]
   deriving Show
@@ -44,10 +47,8 @@ data Data = Data Name [Constr]
 data Constr = Constr Name [Name]
   deriving Show
 
-data Bind = Bind Name Args Expr
+data Bind = Bind Name [Pat] Expr
   deriving Show
-
-type Args = [Pat]
 
 data Pat = PatVar Name | PatCtr Name [Pat] | PatLit Lit
   deriving Show
@@ -91,13 +92,20 @@ instance Pretty Ast where
 instance Pretty Decl where
     pretty (DataDecl d) = pretty d
     pretty (BindDecl d) = pretty d
+    pretty (TypeDecl name t) = ":" ++ name ++ ": " ++ pretty t
+
+instance Pretty Type where
+    pretty TInt = "Int"
+    pretty TBool = "Bool"
+    pretty (TData n) = n
+    pretty (Arrow t1 t2) = pretty t1 ++ " -> " ++ pretty t2
 
 instance Pretty Bind where
     pretty (Bind name args expr) = name ++ (concatMap (\p -> " " ++ pretty p) args) ++ " = " ++ pretty expr
 
 instance Pretty Data where
     pretty (Data name []) = "data " ++ name
-    pretty (Data name ctrs) = "data " ++ name ++ " = " ++ (concatMap (\ctr -> " " ++ pretty ctr) ctrs)
+    pretty (Data name ctrs) = "data " ++ name ++ " = " ++ (concatMap (\ctr -> " | " ++ pretty ctr) ctrs)
 
 instance Pretty Constr where
     pretty (Constr name []) = name
@@ -119,7 +127,7 @@ instance Pretty Expr where
     pretty (App e1 e2@(Lit _)) = "(" ++ pretty e1 ++ ") " ++ pretty e2
     pretty (App e1 e2) = "(" ++ pretty e1 ++ ") (" ++ pretty e2 ++ ")"
     pretty (If cnd thn els) = "if " ++ pretty cnd ++ " then " ++ pretty thn ++ " else " ++ pretty els
-    pretty (Case expr lst) = "case {}"
+    pretty (Case expr lst) = "case (" ++ pretty expr ++ ") of {" ++ concatMap (\(p, b) -> " |" ++ pretty p ++ " -> " ++ pretty b) lst ++ "}"
     pretty (Let name e1 e2) = "let " ++ name ++ " = " ++ pretty e1 ++ " in " ++ pretty e2
     pretty (UnOp op e@(Var _)) = pretty op ++ pretty e
     pretty (UnOp op e@(Lit _)) = pretty op ++ pretty e
@@ -159,3 +167,14 @@ instance Pretty BinOperator where
     pretty (AO o) = pretty o
     pretty (CO o) = pretty o
     pretty (LO o) = pretty o
+
+printTree = show' 0
+  where
+    show' n t =
+      (if n > 0 then printf "%s|_%s" (concat (replicate (n - 1) "| ")) else id)
+      (case t of
+                BinOp op l r -> printf "%s\n%s\n%s" (pretty op) (show' (ident n) l) (show' (ident n) r)
+                UnOp op x -> printf "%s\n%s" (pretty op) (show' (ident n) x)
+                Lit x -> pretty x
+                Var x -> x)
+    ident = succ

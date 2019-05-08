@@ -4,14 +4,43 @@ import Control.Applicative ((<|>))
 import ParserCombinators
 import Ast
 
-program = "data Data = A Int | B | C Bool Int;\nmain = let x = 10 in x ^ x;"
+programParser = runParser parseProgram
 
-parseProgram = sepBy1 (betweenSpaces parseDecl) (char ';') <* char ';'
+parseProgram = sepBy (betweenSpaces parseDecl) (betweenSpaces $ char ';') <* char ';' <* spaces
 
-parseDecl = (DataDecl <$> parseData) <|> (BindDecl <$> parseBind)
+parseDecl = (DataDecl <$> parseData)
+        <|> (BindDecl <$> parseBind)
+        <|> parseType
+
+keywords = ["if", "then", "else", "let", "in", "case", "of", "data", "T", "F"]
+parseVarName = do
+    i <- ident
+    if i `elem` keywords
+    then Parser $ \s -> Left "Fail"
+    else pure i
+
+parseType = do
+    fn <- betweenSpaces (between (char ':') parseVarName)
+    ts <- parsePrimeType
+    pure (TypeDecl fn ts)
+
+--parsePrimeType = do
+parsePrimeType = do
+  fn <- getVarType <$> parseVarName
+  ((do
+     betweenSpaces (string "->")
+     tn <- parsePrimeType
+     pure (Arrow fn tn))
+     <|>
+   (do
+    pure fn))
+
+getVarType "Int" = TInt
+getVarType "Bool" = TBool
+getVarType x = TData x
 
 parseBind = do
-  name <- ident
+  name <- parseVarName
   args <- many (betweenSpaces parsePat)
   betweenSpaces (string "=")
   expr <- parseExpr
@@ -23,14 +52,14 @@ parseData :: Parser String Data
 parseData = do
   string "data"
   spaces
-  dataName <- ident
+  dataName <- parseVarName
   betweenSpaces (char '=')
   ctrs <- sepBy1 parseCtr (betweenSpaces $ char '|')
   pure (Data dataName ctrs)
 
 parseCtr = do
-  i <- ident
-  args <- many (betweenSpaces ident)
+  i <- parseVarName
+  args <- many (betweenSpaces parseVarName)
   pure $ Constr i args
 
 -- Parse 'expr'
@@ -92,13 +121,12 @@ parseCaseBody = do
     expr <- parseExpr
     pure (pat, expr)
 
-parsePat = parsePatCtr <|> parsePat'
-
-parsePat' = parsePatVar <|> parsePatLit <|> (char '(' *> parsePat <* char ')')
+parsePat = parsePatLit <|> parsePatCtr <|> parsePatVar <|> (char '(' *> parsePat <* char ')')
+parsePat' = parsePatLit <|> parsePatVar <|> (char '(' *> parsePat <* char ')')
 
 parsePatLit = PatLit <$> parseLit'
 
-parsePatVar = PatVar <$> ident
+parsePatVar = PatVar <$> parseVarName
 
 parsePatCtr = do
   cname <- constr
@@ -114,7 +142,7 @@ constr = do
 -- Parse Let
 parseLet = do
     betweenSpaces (string "let")
-    name <- ident
+    name <- parseVarName
     betweenSpaces (string "=")
     expr <- parseExpr
     betweenSpaces (string "in")
@@ -135,9 +163,9 @@ parseIf = do
 
 -- Parse variable
 
-parseVar = Var <$> ident
+parseVar = Var <$> parseVarName
 
--- Parse arithm ops
+-- Parse bin ops
 parseBinOp = parseOr
 
 binOp = flip BinOp
@@ -181,16 +209,20 @@ parseMD = do
    mdOp = AO <$> (const Mul <$> betweenSpaces (string "*")
              <|>  const Div <$> betweenSpaces (string "/"))
 
-parsePow = (binOp <$> parseAtom <*> powOp <*> parsePow) <|> parseAtom
+parsePow = (binOp <$> parseUnOp <*> powOp <*> parsePow) <|> parseUnOp
   where
     powOp = AO <$> (const Pow <$> betweenSpaces (string "^"))
+
+-- Parse un ops
+parseUnOp = (UnOp <$> unOp <*> (parseLit <|> parseVar <|> (char '(' *> parseAtom <* char ')'))) <|> parseAtom
+  where
+    unOp = (const Minus <$> betweenSpaces (string "-")) <|> (const Neg <$> betweenSpaces (string "!"))
 
 -- Parse literals
 parseLit :: Parser String Expr
 parseLit = Lit <$> parseLit'
 
 parseLit' = (ILit <$> number) <|> (BLit <$> parseBool)
-
 
 -- Parse boolean literal
 parseBool :: Parser String Bool
