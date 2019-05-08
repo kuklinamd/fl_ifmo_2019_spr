@@ -3,6 +3,8 @@ module Minimizer {-(isMinimal, minimize)-} where
 import AutomatonType
 import Determiner 
 
+import Debug.Trace
+
 import Data.Maybe (fromJust)
 
 import qualified Data.Set as Set hiding (unions)
@@ -24,6 +26,7 @@ isMinimal a = null $ findEqual' a
 
 minimize :: (Ord q, Ord s) => Automaton s [q] -> Automaton s [q]
 minimize a | not (isDFA a)  = minimize $ determine a
+minimize a | isMinimal a = a
 minimize a = toSimple (minimizeCommon a)
   where
     toSimple (Automaton sig sts init term dlt) = Automaton sig sts' init' term' dlt'
@@ -44,7 +47,7 @@ toSingleState Bot = Bot
 minimizeCommon :: (Ord q, Ord s) => Automaton s q -> Automaton s (Set (State q))
 minimizeCommon a@(Automaton sig st init term dlt) = let
     -- List of sets, that contains equal states.
-    eq = Set.toList $ equivClass $ Set.toList $ findEqual' a --findEqual a
+    eq = Set.toList $ equivClass $ Set.toList $ findEqual' a
     -- Set of not equals states.
     rest = restStates st eq
     lrest = Set.singleton <$> Set.toList rest
@@ -61,20 +64,21 @@ minimizeCommon a@(Automaton sig st init term dlt) = let
     newInitSet (s:[]) = s
     newInitSet _ = error $ "Init state more than at one equals states."
 
-    newDelta dlt st [] mp = mp
-    newDelta dlt st (s:sts) mp = let
-        trans = map (\k -> Map.filterWithKey (stateMatches k)  dlt) $ Set.toList s
-        in newDelta dlt st sts $ foldr (\t mp -> f mp (Map.toList t)) mp trans
-        where
-          f mp [] = mp
-          f mp (((_ , symb), s2):ms) = let
-              ns = findNewState st (Set.elemAt 0 s2)
-              mp' = Map.insert (State s, symb) (Set.singleton (State ns)) mp
-           in f mp' ms
+newDelta dlt st [] mp = mp
+newDelta dlt st (s:sts) mp = let
+    trans = map (\k -> Map.filterWithKey (stateMatches k)  dlt) $ Set.toList s
+    in newDelta dlt st sts $ foldr (\t mp -> f mp (Map.toList t)) mp trans
+    where
+      f mp [] = mp
+      f mp (((_ , symb), s2):ms) = let
+          ns = findNewState st (Set.elemAt 0 s2)
+          mp' = Map.insert (State s, symb) (Set.singleton (State ns)) mp
+       in f mp' ms
 
-    findNewState [] s2 = error "Empty list of states!"
-    findNewState (s:st) s2 | s2 `Set.member` s = s
-    findNewState (s:st) s2 = findNewState st s2
+findNewState [] s2 = error $ "Empty list of states!"
+findNewState (s:st) s2 | s2 `Set.member` s = s
+findNewState (s:st) s2 = findNewState st s2
+
 
 -- Reverse Delta ->
 -- Terminal States ->

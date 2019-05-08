@@ -8,8 +8,6 @@ import qualified Data.Set as Set
 
 import Data.Maybe (fromJust, isJust)
 
-import Debug.Trace
-
 -- Checks if the automaton is complete (there exists a transition for each state and each input symbol)
 isComplete :: (Ord a, Ord b) => Automaton a b -> Bool
 isComplete a@(Automaton sig sts _ _ delta) | not (isNFAUsefull a) = all check ((,) <$> Set.toList sts <*> Set.toList sig)
