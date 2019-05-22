@@ -112,12 +112,12 @@ data Decl = BindDecl Bind
 data Bind = Bind Name [Name] Expr
 
 data Expr = Var Name
-		  | Lit Lit
+          | Lit Lit
           | App Expr Expr
           | If Expr Expr Expr
-		  | Let Name Expr Expr
+          | Let Name Expr Expr
           | UnOp UnOperator Expr
-		  | BinOp BinOperator Expr Expr
+          | BinOp BinOperator Expr Expr
 
 data Lit = ILit Integer | BLit Bool
 
