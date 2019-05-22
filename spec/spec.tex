@@ -13,7 +13,8 @@
 
 \section{Конкретный синтаксис.}
 \begin{grammar}
-<ident> ::= <nondigit> \alt <nondigit> <alphanum> \alt <nondigit> <alphanum> <ident_rest>
+<ident> ::= <nondigit>
+\alt <nondigit> <ident_rest>
 
 <ident_rest> ::= <alphanum> | <alphanum> <ident_rest>
 
