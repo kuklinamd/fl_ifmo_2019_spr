@@ -4,7 +4,7 @@ import Control.Applicative ((<|>))
 import ParserCombinators
 import Ast
 
-programParser = runParser parseProgram
+programParser = runParser (parseProgram <* eof)
 
 parseProgram = sepBy (betweenSpaces parseDecl) (betweenSpaces $ char ';') <* char ';' <* spaces
 
@@ -75,7 +75,7 @@ parseCtr = do
 --
 -- If: if x == 0 then 0 else 1
 --
--- Case: case x of { Pat1 -> 1; Pat2 -> 3;}
+-- Case: case x of { | Pat1 -> 1 | Pat2 -> 3}
 --
 -- Let: let x = 10 in x + 12
 --
@@ -116,17 +116,23 @@ parseCase = do
 
 parseCaseBody = do
     betweenSpaces (string "|")
-    pat <- parsePat
+    pat <- parseCasePat
     betweenSpaces (string "->")
     expr <- parseExpr
     pure (pat, expr)
 
-parsePat = parsePatLit <|> parsePatCtr <|> parsePatVar <|> (char '(' *> parsePat <* char ')')
-parsePat' = parsePatLit <|> parsePatVar <|> (char '(' *> parsePat <* char ')')
+parseCasePat = parsePatLit <|> parsePatCtr <|> parsePatVar <|> (char '(' *> parseCasePat <* char ')')
+
+parsePat = parsePatLit <|> parsePatCtr1 <|> parsePatVar <|> (char '(' *> parsePat' <* char ')')
+parsePat' = parsePatLit <|> parsePatCtr <|> parsePatVar <|> (char '(' *> parsePat <* char ')')
 
 parsePatLit = PatLit <$> parseLit'
 
 parsePatVar = PatVar <$> parseVarName
+
+parsePatCtr1 = do
+  cname <- constr
+  pure (PatCtr cname [])
 
 parsePatCtr = do
   cname <- constr
