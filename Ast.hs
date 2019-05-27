@@ -113,7 +113,7 @@ instance Pretty Constr where
 
 instance Pretty Pat where
     pretty (PatVar n) = n
-    pretty (PatLit l) = show l
+    pretty (PatLit l) = pretty l
     pretty (PatCtr ctr []) = ctr
     pretty (PatCtr ctr ps) = "(" ++ ctr ++ (concatMap (\p -> " " ++ pretty p) ps) ++ ")"
 
