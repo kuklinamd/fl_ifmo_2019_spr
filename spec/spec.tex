@@ -53,18 +53,18 @@
 <atom-expr> ::= <ident>
 \alt <lit>
 \alt <app>
-\alt 'if' <expr> 'then' <expr> 'else' <expr>
-\alt 'let' var '=' <expr> 'in' <expr>
+\alt `if' <expr> `then' <expr> `else' <expr>
+\alt `let' var `=' <expr> `in' <expr>
 \alt  <expr> <binop> <expr>
 \alt <unop> <expr>
-\alt '(' <expr> ')'
+\alt `(' <expr> `)'
 
-<app> ::=  <ident> ' ' <ident>
-\alt <ident> ' ' <lit>
-\alt <ident> ' ' '(' <expr>')'
-\alt '(' <expr> ')' <ident>
-\alt '(' <expr> ')' <lit>
-\alt '(' <expr> ')' '(' <expr> ')'
+<app> ::= <ident> ` ' <app-args>
+\alt `(' <expr> `)' ` ' <app-args>
+
+<app-args> ::= <app-arg> | <app-arg> ` ' <app-args>
+
+<app-arg> ::= <lit> | <ident> | `(' <expr> `)'
 
 <bind> ::= <ident> <arg> '=' <expr>
 \alt <ident> '=' <expr>
