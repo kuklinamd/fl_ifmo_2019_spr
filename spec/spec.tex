@@ -14,9 +14,16 @@
 
 \section{Конкретный синтаксис.}
 \begin{grammar}
-<ident> ::= <nondigit> \alt <nondigit> <alphanum> \alt <nondigit> <alphanum> <ident>
+<ident> ::= <nondigit>
+\alt <nondigit> <ident_rest>
 
-<binop> ::= `+' | `.-' | `^' | `*' | `/' | `==' | `/= ' | `<=' | `<' | `>' | `>=' | `|' | `\&\&'
+<ident_rest> ::= <alphanum> | <alphanum> <ident_rest>
+
+<cmp-op> ::= `==' | `/= ' | `<=' | `<' | `>' | `>=' 
+
+<md-op> ::= `*' | `/' 
+
+<pm-op> ::= `+' | `.-' 
 
 <unop> ::= '-' | '!'
 
@@ -36,40 +43,60 @@
 
 <pats> ::= <pat> | <pat> <pats>
 
-<expr> ::= <ident>
+<expr> ::= <binop-expr>
+
+<binop-expr> ::= <or-expr>
+
+<or-expr> ::= <and-expr> `||' <or-expr> | <and-expr>
+
+<and-expr> ::= <cmp-expr> `&&' <and-expr> | <cmp-expr>
+
+<cmp-expr> ::= <pm-expr> <cmp-op> <pm-expr> | <pm-expr>
+
+<pm-expr> ::= <pm-expr> <pm-op> <md-expr> | <md-expr>
+
+<md-expr> ::= <md-expr> <md-op> <pow-expr> | <pow-expr>
+
+<pow-expr> ::= <unop-expr> `^' <pow-expr> | <unop-expr>
+
+<unop-expr> ::= <un-op> <lit>
+\alt <un-op> <var>
+\alt <un-op> `(' <atom-expr> `)'
+
+<atom-expr> ::= <ident>
 \alt <lit>
 \alt <app>
-\alt 'if' <expr> 'then' <expr> 'else' <expr>
-\alt 'let' var '=' <expr> 'in' <expr>
-\alt 'case' '(' <expr> ')' 'of' '\{' <case-body> '\}'
+\alt `if' <expr> `then' <expr> `else' <expr>
+\alt `let' var `=' <expr> `in' <expr>
+\alt `case' `(' <expr> `)' 'of' `{' <case-body> `}'
 \alt  <expr> <binop> <expr>
 \alt <unop> <expr>
-\alt '(' <expr> ')'
+\alt `(' <expr> `)'
 
-<app> ::=  <ident> ' ' <ident>
-\alt <ident> ' ' <lit>
-\alt <ident> ' ' '(' <expr>')'
-\alt '(' <expr> ')' <ident>
-\alt '(' <expr> ')' <lit>
-\alt '(' <expr> ')' '(' <expr> ')'
+<app> ::= <ident> ` ' <app-args>
+\alt `(' <expr> `)' ` ' <app-args>
 
-<case-entry> ::= '|' <pat> '->' <expr> 
+<app-args> ::= <app-arg> | <app-arg> ` ' <app-args>
+
+<app-arg> ::= <lit> | <ident> | `(' <expr> `)'
+
+<case-entry> ::= `|' <pat> `->' <expr> 
 
 <case-body> ::= <case-entry> | <case-entry> <case-body>
 
-<bind> ::= <ident> (<arg> | $\varepsilon$) '=' <expr>
+<bind> ::= <ident> (<arg> | $\varepsilon$) `=' <expr>
 
-<arg> ::= <ident> | <ident> ' ' <arg>
+<arg> ::= <ident> | <ident> ` ' <arg>
 
-<data> ::= 'data' <constr-name> '=' <data-body>
+<data> ::= `data' <constr-name> `=' <data-body>
 
-<data-body> ::= <data-entry> | <data-entry> '|' <data-body>
+<data-body> ::= <data-entry> | <data-entry> `|' <data-body>
 
 <data-entry> ::= <constr-name> | <constr-name> <pats>
 
-<type-def> ::= ':' ident ':' <type>
+<type-def> ::= `:' ident `:' <type>
 
-<type> ::= 'Int'
+<type> ::= `Int'
 \alt 'Bool'
 \alt <type> '->' <type>
 
