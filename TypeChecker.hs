@@ -39,6 +39,7 @@ typeChecker' dCtx fCtx (d:ds)
       typeChecker' dCtx ctx ds
   | otherwise = Left "Function declared without its type!"
 
+
 ctrToType name (Constr cName names) = (cName, f name names)
   where
     f name [] = nameToType name
@@ -56,8 +57,10 @@ checkBind dCtx nCtx tp (Bind _ pats expr) = let
          ctxs <- mapM (uncurry (checkPat dCtx nCtx)) (zip patTypes pats)
          if disjoint ctxs then do
              let ctx = (concat ctxs) ++ nCtx
-             checkExpr dCtx ctx  expr
-             Right nCtx
+             exprt <- checkExpr dCtx ctx  expr
+             if exprt /= resultType
+             then Left $ "Result type and actual expr type doesn't match: (" ++ pretty exprt ++ ") and (" ++ pretty resultType ++ ")"
+             else Right nCtx
          else Left $ "Problems with patterns in function arguments."
      else Left "Function has different arity!"
 
@@ -78,7 +81,7 @@ checkPat dCtx fCtx expectedType (PatCtr n ps)
          else Left $ "Boo3: " ++ show ctxs
        else Left $ "Different number of arguments in the constructor '" ++ n ++ "' and in its type."
      else Left $ "Type '" ++ pretty expectedType ++ "' of the constructor '" ++ n ++ "' doesn't match its usage."
-checkPat _ _ _ _ = Left "Pat doesn't match expected type"
+checkPat _ _ _ _ = Left "Cannot typecheck pat!"
 
 disjoint :: Eq a => [[a]] -> Bool
 disjoint = fst . foldr (\n (s, acc) ->
@@ -89,7 +92,6 @@ destructType TInt = ([], TInt)
 destructType TBool = ([], TBool)
 destructType (TData a) = ([], TData a)
 destructType (Arrow t1 t2) = let (ts, t) = destructType t2 in (t1:ts, t)
-
 
 checkExpr :: DataCtx -> NameCtx -> Expr -> Either String Type
 checkExpr _ fCtx (Var n)
