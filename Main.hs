@@ -6,14 +6,26 @@ import Ast
 import Parser
 import TypeChecker
 import ParserCombinators
+import Infer
+import Control.Monad
+import Data.Either
 
 main :: IO ()
 main = do
   fileNames <- getArgs
-  mapM_
-    (\fileName -> do
-        input <- readFile fileName
-        case programParser input of
+  forM_ fileNames $ \fileName -> do
+    input <- readFile fileName
+    let simpl = runParser (parseText <* eof) input
+    let nested = runParser (parseTextNested <* eof) input
+
+    isFail simpl "Failed to parse file without nested multiline comments."
+    isFail nested "Failed to parse file with nested multiline comments."
+
+    if isLeft nested
+    then
+       putStrLn "Stop handle the file."
+    else
+        case programParser (getParsed nested) of
             Left err -> putStrLn $ "error: " ++ err
             Right (_, ast) -> do
               putStrLn "\n>>> Pretty print of parsed AST:\n"
@@ -24,5 +36,6 @@ main = do
                 Right ctx -> do
                     putStrLn "Everything typechecked."
                     putStrLn $ pretty ctx
-    )
-    fileNames
+
+isFail (Right _) _ = pure ()
+isFail (Left _) str = putStrLn str

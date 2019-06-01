@@ -16,6 +16,7 @@ module ParserCombinators
 import Control.Applicative hiding (many, some)
 import qualified Control.Applicative as CA (many, some)
 import Control.Arrow (second)
+import Data.List ((\\), isPrefixOf)
 
 data Position = Position { line :: Integer, symb :: Integer }
 
@@ -43,6 +44,8 @@ newtype Parser tok ok = Parser { runStreamParser :: Stream tok -> Either ParseEr
 
 runParser :: Parser tok ok -> tok -> Either ParseError (Stream tok, ok)
 runParser p t = runStreamParser p (Stream (Position 0 0) t)
+
+getParsed (Right (_, t)) = t
 
 instance Functor (Parser str) where
     fmap f p = Parser $ \s ->
@@ -128,6 +131,11 @@ spaces1 = some $ orChar spaceChars
 spaces = many $ orChar spaceChars
 spaceChars = ['\t', '\n', '\r', '\f', '\v', ' ']
 
+spaces' = many (orChar spaceChars) *> pure ()
+  where spaceChars = ['\t', '\f', '\v', ' ']
+
+newline = char '\n' *> pure ()
+
 betweenSpaces = between spaces
 
 between b p = b *> p <* b
@@ -143,3 +151,20 @@ word p = p <* (nullify eof <|> nullify spaces1)
 
 many = CA.many
 some = CA.some
+
+anychar = orChar allchars
+
+notchar x = orChar (allchars \\ [x])
+notchars xs = orChar (allchars \\ xs)
+
+checkNext :: Char -> Parser String Bool
+checkNext ch = Parser $ \s -> case (content s) of
+                                (x:xs) | ch == x -> Right (s, True)
+                                _ -> Right (s, False)
+
+checkNexts :: String -> Parser String Bool
+checkNexts ss = Parser $ \s -> Right (s, isPrefixOf ss (content s))
+
+failP s = Parser (const $ Left s)
+
+allchars = [' ' .. '~'] ++ spaceChars
