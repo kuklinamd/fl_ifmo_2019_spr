@@ -17,6 +17,7 @@ import Control.Applicative hiding (many, some)
 import qualified Control.Applicative as CA (many, some)
 import Control.Arrow (second)
 import Data.List ((\\), isPrefixOf)
+import Control.Monad.Fail
 
 data Position = Position { line :: Integer, symb :: Integer }
 
@@ -74,6 +75,9 @@ instance Monad (Parser str) where
       (s', ok') <- p s
       runStreamParser (k ok') s'
 
+instance MonadFail (Parser str) where
+    fail str = failP str
+
 instance Monoid err => Alternative (Either err) where
     empty = Left mempty
     Right a <|> _ = Right a
@@ -84,7 +88,7 @@ char :: Char -> Parser String Char
 char t = Parser $ \(Stream pos content) ->
   case content of
       (hd : tl) | hd == t -> Right (Stream (incPos hd pos) tl, hd)
-      _ -> Left $ "char: " ++ show pos ++ ": symbol" ++ printU (uncons content) ++ " doesn't match " ++ show t
+      _ -> Left $ "char: symbol" ++ printU (uncons content) ++ " doesn't match " ++ show t
   where
     incPos '\n' = incLine . incSymb
     incPos _ = incSymb
@@ -99,8 +103,7 @@ string (c:cs) = do
   return (c:cs)
 
 orChar :: [Char] -> Parser String Char
-orChar [] = Parser $ \(Stream pos content) -> Left $ "orChar: " ++ show pos ++
-                                                     ": symbol '" ++ printU (uncons content) ++
+orChar [] = Parser $ \(Stream pos content) -> Left $ "orChar: symbol '" ++ printU (uncons content) ++
                                                      "' doesn't match any char from the given list."
 orChar (c:cs) = char c <|> orChar cs
 

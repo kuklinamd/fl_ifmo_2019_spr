@@ -4,9 +4,7 @@ import System.Environment
 import Text.Printf
 import Ast
 import Parser
-import TypeChecker
 import ParserCombinators
-import Infer
 import Control.Monad
 import Data.Either
 
@@ -14,6 +12,7 @@ main :: IO ()
 main = do
   fileNames <- getArgs
   forM_ fileNames $ \fileName -> do
+    putStrLn $ ">>> Handle " ++ fileName ++ "\n\n"
     input <- readFile fileName
     let simpl = runParser (parseText <* eof) input
     let nested = runParser (parseTextNested <* eof) input
@@ -28,14 +27,16 @@ main = do
         case programParser (getParsed nested) of
             Left err -> putStrLn $ "error: " ++ err
             Right (_, ast) -> do
+              putStrLn $ "\n>>> Original:\n"
+              putStrLn input
               putStrLn "\n>>> Pretty print of parsed AST:\n"
               putStrLn $ pretty ast
-              putStrLn "\n>>> Type checker result (context):\n"
-              case typeCheckerCtx ast of
-                Left err -> putStrLn $ "error: " ++ err
-                Right ctx -> do
-                    putStrLn "Everything typechecked."
-                    putStrLn $ pretty ctx
+              -- putStrLn "\n>>> Type checker result (context):\n"
+              -- case typeCheckerCtx ast of
+              --   Left err -> putStrLn $ "error: " ++ err
+              --   Right ctx -> do
+              --       putStrLn "Everything typechecked."
+              --       putStrLn $ pretty ctx
 
 isFail (Right _) _ = pure ()
 isFail (Left _) str = putStrLn str

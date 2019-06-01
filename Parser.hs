@@ -4,6 +4,7 @@ import           Control.Applicative                      ( (<|>) )
 import           ParserCombinators
 import           Ast
 import Data.List ((\\))
+import Data.Char (isLower, isUpper)
 
 programParser input =
   case (runParser (parseText <* eof) input) of
@@ -22,49 +23,98 @@ parseDecl = (DataDecl <$> parseData) <|> (BindDecl <$> parseBind) <|> parseType
 keywords = ["if", "then", "else", "let", "in", "case", "of", "data", "T", "F"]
 parseVarName = do
   i <- ident
-  if i `elem` keywords then Parser $ \s -> Left "Fail" else pure i
+  if i `elem` keywords then Parser $ \s -> Left "Indent is a keyword!" else pure i
 
 parseType = do
   fn <- betweenSpaces (between (char ':') parseVarName)
-  ts <- parsePrimeType
+  ts <- parsePrimeType'
   pure (TypeDecl fn ts)
 
---parsePrimeType = do
 parsePrimeType = do
   fn <- getVarType <$> parseVarName
   (do
       betweenSpaces (string "->")
       tn <- parsePrimeType
-      pure (Arrow fn tn)
+      pure (fn :-> tn)
     )
     <|> pure fn
 
 getVarType "Int"  = TInt
 getVarType "Bool" = TBool
-getVarType x      = TData x
+getVarType x = TVar x
+
+parsePrimeType' = do
+  fn <- getVarType' <$> many (betweenSpaces parseVarName)
+  (do
+      betweenSpaces (string "->")
+      tn <- parsePrimeType'
+      pure (fn :-> tn)
+   )
+   <|> pure fn
+
+getVarType' ["Int"]  = TInt
+getVarType' ["Bool"] = TBool
+getVarType' [x]
+  | isLower (head x) = TVar x
+getVarType' (x:xs)
+  | isUpper (head x) = TData x (getVarType <$> xs)
+getVarType' x = error $ "Bad data type: `" ++ show x ++ "'"
 
 parseBind = do
   name <- parseVarName
   args <- many (betweenSpaces parsePat)
   betweenSpaces (string "=")
+  spaces
   expr <- parseExpr
   pure (Bind name args expr)
 
 -- Parse 'data'
--- data NAME = CTR ARG*
+-- data NAME = CTR ARG (| CTR ARG)*
 parseData :: Parser String Data
 parseData = do
   string "data"
   spaces
   dataName <- parseVarName
+  spaces
+  ts  <- fmap TypeVar <$> sepBy parseVarName spaces
   betweenSpaces (char '=')
   ctrs <- sepBy1 parseCtr (betweenSpaces $ char '|')
-  pure (Data dataName ctrs)
+  pure (Data dataName ts ctrs)
 
 parseCtr = do
   i    <- parseVarName
-  args <- many (betweenSpaces parseVarName)
+  -- args <- many (betweenSpaces (parseTypeNoArrow <|> char '(' *> parseTypeNoArrow <* char ')'))
+  spaces
+  args <- sepBy parseTypeNoArrow spaces
   pure $ Constr i args
+
+parseTypeNoArrow = parseTypeNoArrow'
+
+parseTypeNoArrow' = do
+    char '('
+    TData x _ <- getVarType <$> parseVarName
+    spaces
+    cs <- sepBy parseTypeNoArrow' spaces
+    char ')'
+    pure (TData x cs)
+  <|>
+   getVarType <$> parseVarName
+  where
+    getVarType "Int"  = TInt
+    getVarType "Bool" = TBool
+    getVarType x
+      | isLower (head x) = TVar x
+      | isUpper (head x) = TData x []
+
+
+    getVarType' ["Int"]  = TInt
+    getVarType' ["Bool"] = TBool
+    getVarType' (x:xs)
+      | isLower (head x) = TVar x
+    getVarType' (x:xs)
+      | isUpper (head x) = TData x (getVarType <$> xs)
+    getVarType' x = error $ "Bad data type: `" ++ show x ++ "'"
+
 
 -- Parse 'expr'
 --
@@ -100,7 +150,9 @@ parseAtom =
 
 -- Parse application
 
-parseArg = parseLit <|> parseVar <|> (char '(' *> parseExpr <* char ')')
+parseArg = parseLit
+       <|> parseVar
+       <|> (char '(' *> parseExpr <* char ')')
 
 parseApp = do
   fn <- parseVar <|> (char '(' *> parseExpr <* char ')')

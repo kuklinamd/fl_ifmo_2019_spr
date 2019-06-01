@@ -37,20 +37,31 @@ type Ast = [Decl]
 data Decl = DataDecl Data | BindDecl Bind | TypeDecl Name Type
   deriving Show
 
-data Type = Arrow Type Type | TInt | TBool | TData String
+
+infix 3 :->
+data Type = Type :-> Type
+          | TInt
+          | TBool
+          | TData Name [Type]
+          | TVar Name
   deriving (Show, Eq)
 
-data Data = Data Name [Constr]
+data TypeVar = TypeVar Name
+  deriving Show
+
+data Data = Data Name [TypeVar] [Constr]
   deriving Show
 
 -- Constr {Constr's name} {Constr's params}
-data Constr = Constr Name [Name]
+data Constr = Constr Name [Type]
   deriving Show
 
 data Bind = Bind Name [Pat] Expr
   deriving Show
 
-data Pat = PatVar Name | PatCtr Name [Pat] | PatLit Lit
+data Pat = PatVar Name
+         | PatCtr Name [Pat]
+         | PatLit Lit
   deriving Show
 
 data Expr = Var Name
@@ -97,19 +108,34 @@ instance Pretty Decl where
 instance Pretty Type where
     pretty TInt = "Int"
     pretty TBool = "Bool"
-    pretty (TData n) = n
-    pretty (Arrow t1 t2) = pretty t1 ++ " -> " ++ pretty t2
+    pretty (TVar x) = x
+    pretty (TData n ts) = n ++ concatMap
+      (\x -> " " ++ case x of
+               TData _ _ -> "(" ++ pretty x ++ ")"
+               _ -> pretty x
+      )
+      ts
+    pretty (t1 :-> t2) = pretty t1 ++ " -> " ++ pretty t2
 
 instance Pretty Bind where
     pretty (Bind name args expr) = name ++ (concatMap (\p -> " " ++ pretty p) args) ++ " = " ++ pretty expr
 
 instance Pretty Data where
-    pretty (Data name []) = "data " ++ name
-    pretty (Data name ctrs) = "data " ++ name ++ " = " ++ (concatMap (\ctr -> " | " ++ pretty ctr) ctrs)
+    pretty (Data name ts []) = "data " ++ name ++ (concatMap (\t -> " " ++ pretty t) ts)
+    pretty (Data name ts (c:ctrs)) = "data " ++ name
+      ++ (concatMap (\t -> " " ++ pretty t) ts) ++ " = "
+      ++ pretty c ++ (concatMap (\ctr -> " | " ++ pretty ctr) ctrs)
+
+instance Pretty TypeVar where
+    pretty (TypeVar var) = var
 
 instance Pretty Constr where
     pretty (Constr name []) = name
-    pretty (Constr name ns) = "(" ++ name ++ (concatMap (" " ++) ns) ++ ")"
+    pretty (Constr name ns) = "(" ++ name ++ (concatMap
+      (\n -> " " ++ case n of
+               TData _ _ -> "(" ++ pretty n ++ ")"
+               _ -> pretty n
+      ) ns) ++ ")"
 
 instance Pretty Pat where
     pretty (PatVar n) = n
