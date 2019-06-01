@@ -20,11 +20,11 @@ main = do
     isFail simpl "Failed to parse file without nested multiline comments."
     isFail nested "Failed to parse file with nested multiline comments."
 
-    if isLeft nested
+    if isLeft nested && isLeft simpl
     then
        putStrLn "Stop handle the file."
     else
-        case programParser (getParsed nested) of
+        case programParser (getParsed (isOk nested simpl)) of
             Left err -> putStrLn $ "error: " ++ err
             Right (_, ast) -> do
               putStrLn $ "\n>>> Original:\n"
@@ -40,3 +40,6 @@ main = do
 
 isFail (Right _) _ = pure ()
 isFail (Left _) str = putStrLn str
+
+isOk t@(Right _) _ = t
+isOk _ t@(Right _) = t
