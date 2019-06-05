@@ -5,6 +5,7 @@ import           ParserCombinators
 import           Ast
 import Data.List ((\\))
 import Data.Char (isLower, isUpper)
+import Debug.Trace
 
 programParser input =
   case (runParser (parseText <* eof) input) of
@@ -340,11 +341,17 @@ parseMultiLine = do
 parseMultiLineNested :: Parser String Char
 parseMultiLineNested = do
   string "{-"
+  spaces
   many ((char '-' *> notchar '}')
      <|> parseMultiLineNested *> pure 'a'
      <|> (orChar $ allchars  \\ "-"))
-  string "-}"
-  pure ' '
+  spaces
+  b <- checkNexts "-}"
+  if not b
+  then failP "Comments not nested"
+  else do
+    string "-}"
+    pure ' '
 
 parseOneLine :: Parser String String
 parseOneLine = do
@@ -377,14 +384,26 @@ spacesEnd = parseOneLine
 
 p1 = many anychar' <* spacesEnd
 p2 ml = do
-  c <- many ml
-  r <- many anychar'
-  b <- checkNexts "-}"
-  if b
-  then failP ":("
+  b1 <- checkNexts "{-"
+  if b1
+  then do
+    c <- some ml
+    r <- many anychar'
+    b <- checkNexts "-}"
+    if b
+    then failP ":("
+    else do
+      rest <- eof *> pure "" <|> spacesEnd <|> p2 ml
+      pure (c ++ r ++ rest)
   else do
-    rest <- eof *> pure "" <|> spacesEnd <|> p2 ml
-    pure (c ++ r ++ rest)
+    r <- many anychar'
+    b <- checkNexts "-}"
+    if b
+    then failP ":("
+    else do
+      rest <- eof *> pure "" <|> spacesEnd <|> p2 ml
+      pure (r ++ rest)
+
 
 parseText = do
   text <- p2 parseMultiLine
@@ -463,9 +482,33 @@ test2
   , Right (_, "  123   abc   456   def ") <- pm "{--} 123 {--} abc {--} 456 {--} def --"
   , Right (_, "123\t ") <- pm "123\t -- comment"
   , Right (_, "\t123\t ") <- pm "\t123\t -- comment"
+  , Right (_, "abcd  ") <- pm "abcd {- {- -}"
   = True
   | otherwise
   = False
-   where pm = runParser (p2 parseMultiLine)
+  where pm = runParser (p2 parseMultiLine)
 
-runAllTests = all id [test1, test1', test1'', test2', test2'', test2]
+test2Nested
+  | Right (_, " ") <- pm "{- comment -}"
+  , Right (_, " ") <- pm "{- -123 -}"
+  , Right (_, " ") <- pm "{- comment-comment -}"
+  , Right (_, " ") <- pm "{- comment\ncomment -}"
+  , Right (_, " ") <- pm "{- -}"
+  , Right (_, " ") <- pm "{--}"
+  , Right (_, "  ") <- pm "{--}{--}"
+  , Right (_, "   ") <- pm "{-comment1-}{-comment2-}{- -}"
+  , Left _ <- pm "{- {- -}"
+  , Right (_, " ") <- pm "{- {- -} -}"
+  , Right (_, " 123 ") <- pm "{- comment -}123{- comment -}-- comment"
+  , Right (_, " 123  abc ") <- pm "{- comment -}123{- comment -} abc -- comment"
+  , Right (_, "  123   abc   456   def ") <- pm "{--} 123 {--} abc {--} 456 {--} def --"
+  , Right (_, "123\t ") <- pm "123\t -- comment"
+  , Right (_, "\t123\t ") <- pm "\t123\t -- comment"
+  , Left _ <- pm "abcd {- {- -}"
+  , Right (_, "abcd  ") <- pm "abcd {- {- -} -}"
+  = True
+  | otherwise
+  = False
+  where pm = runParser (p2 parseMultiLineNested)
+
+runAllTests = all id [test1, test1', test1'', test2', test2'', test2, test2Nested]
