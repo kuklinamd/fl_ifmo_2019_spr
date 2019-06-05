@@ -334,7 +334,7 @@ parseMultiLine = do
           c1 <- char '-'
           b <- checkNext '}'
           if b
-          then Parser (const $ Left ":(")
+          then Parser (const $ Left "Bad placed comments.")
           else pure c1
 
 
@@ -364,7 +364,7 @@ anychar1 = do
     c1 <- char '{'
     b <- checkNext '-'
     if b
-    then failP ":("
+    then failP "Cannot parse next chars: bad placed comments."
     else pure c1
 
 anychar2 = do
@@ -372,7 +372,7 @@ anychar2 = do
     b1 <- checkNext '}'
     b2 <- checkNext '-'
     if b1 || b2
-    then failP ":("
+    then failP "Cannot parse next chars: bad placed comments."
     else pure c1
 
 anychar3 = orChar $ allchars \\ "{-\n"
@@ -391,7 +391,7 @@ p2 ml = do
     r <- many anychar'
     b <- checkNexts "-}"
     if b
-    then failP ":("
+    then failP "Cannot parse next chars: bad placed comments."
     else do
       rest <- eof *> pure "" <|> spacesEnd <|> p2 ml
       pure (c ++ r ++ rest)
@@ -399,7 +399,7 @@ p2 ml = do
     r <- many anychar'
     b <- checkNexts "-}"
     if b
-    then failP ":("
+    then failP "Cannot parse next chars: bad placed comments."
     else do
       rest <- eof *> pure "" <|> spacesEnd <|> p2 ml
       pure (r ++ rest)
